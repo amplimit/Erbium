@@ -78,10 +78,6 @@ const erbium = (() => {
     if (avatar) {
       avatar.textContent = me.username.slice(0, 1);
     }
-    const node = document.getElementById("brandNode");
-    if (node) {
-      node.textContent = nodeName() || window.location.hostname;
-    }
     return me;
   }
 
@@ -172,11 +168,6 @@ const erbium = (() => {
     return hostname.slice("node-".length);
   }
 
-  function nodeName() {
-    const host = nodeHost();
-    return host ? host.split(".")[0].replace(/-erbium$/, "") : null;
-  }
-
   function flash(button, iconName, label) {
     const original = { html: button.innerHTML, label: button.getAttribute("aria-label"), title: button.title };
     button.innerHTML = icon(iconName);
@@ -247,6 +238,6 @@ const erbium = (() => {
 
   return {
     api, loadMe, logout, escapeHtml, formatNumber, formatHours, formatDuration, formatRelative, formatTime, setFeedback,
-    nodeHost, nodeName, copy, codeBlock, bindCopy, applyWidths, bindForm, icon
+    nodeHost, copy, codeBlock, bindCopy, applyWidths, bindForm, icon
   };
 })();
