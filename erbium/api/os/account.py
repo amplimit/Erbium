@@ -117,6 +117,8 @@ class LinuxAccount(object):
         self._start_jupyter(jupyter_token)
 
     def _remaining(self) -> bool:
+        if self._jupyter is not None:
+            self._jupyter.poll()
         return run(("pgrep", "-u", self.username), stdout=DEVNULL, stderr=DEVNULL, check=False).returncode == 0
 
     def _kill_everything(self, timeout: float = 30) -> None:
