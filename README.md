@@ -33,19 +33,22 @@ Some facts:
 ## Installation
 
 ```shell
-pip install git+https://github.com/ProjectNeura/Erbium
+pip install git+https://github.com/amplimit/Erbium
 ```
 
 ## Accessing an Erbium Node
 
-The username is always "access". You need to schedule a job to set the SSH password.
+Each node serves three hostnames through Cloudflare Tunnel. For a node named "main":
 
-For example, to access the main node, visit https://main-erbium.projectneura.org and you will see the web SSH interface.
+- https://node-main-erbium.projectneura.org is the dashboard. Sign in with the account an administrator created for
+  you, join the queue, and manage your settings.
+- main-erbium.projectneura.org is SSH. The username is always "access".
+- https://jupyter-main-erbium.projectneura.org is JupyterLab.
 
-Adding "node-" such that https://node-main-erbium.projectneura.org directs you to the job scheduling page.
-
-Adding "jupyter-" such that https://node-main-erbium.projectneura.org directs you to the JupyterLab. Note that whenever
-a new job initializes, you will need to log into the web SSH interface and use `jupyter server list` to get the token.
+When your reservation starts, the dashboard shows a one-time SSH password and a JupyterLab link for that session, and
+installs the SSH public keys saved in your settings. When the reservation ends, all processes of the session are killed
+and the credentials stop working. Add an email address in settings to be notified when your job starts or is about to
+end.
 
 To use other nodes, simply replace "main" with the name of the node.
 
@@ -54,7 +57,7 @@ To use other nodes, simply replace "main" with the name of the node.
 ### Clone the Repository
 
 ```shell
-git clone https://github.com/ProjectNeura/Erbium
+git clone https://github.com/amplimit/Erbium
 ```
 
 ### Install the Dependencies
@@ -82,13 +85,13 @@ python -m erbium docker init
 > This step is required if you want to update Erbium
 
 ```shell
-python -m erbium docker create -n ${SERVICE_NAME} -p ${SSH_PASSWORD} ${INPUT_DIR} ${OUTPUT_DIR} ${BACKUP_DIR} ./docker-compose.yaml
+python -m erbium docker create -n ${SERVICE_NAME} ${INPUT_DIR} ${OUTPUT_DIR} ${BACKUP_DIR} ./docker-compose.yaml
 ```
 
 To disable automatic output backups, omit `BACKUP_DIR` and pass `--no-backup`:
 
 ```shell
-python -m erbium docker create -n ${SERVICE_NAME} -p ${SSH_PASSWORD} --no-backup ${INPUT_DIR} ${OUTPUT_DIR} ./docker-compose.yaml
+python -m erbium docker create -n ${SERVICE_NAME} --no-backup ${INPUT_DIR} ${OUTPUT_DIR} ./docker-compose.yaml
 ```
 
 ### Start the Docker Container
@@ -98,6 +101,29 @@ python -m erbium docker create -n ${SERVICE_NAME} -p ${SSH_PASSWORD} --no-backup
 ```shell
 python -m erbium docker run ./docker-compose.yaml ${SERVICE_NAME}
 ```
+
+### Configure Email Notifications (Optional)
+
+Create an env file outside the repository, for example `erbium.env`:
+
+```shell
+RESEND_API_KEY=re_xxxxxxxx
+ERBIUM_MAIL_FROM=Erbium <erbium@your-verified-domain.org>
+ERBIUM_PUBLIC_URL=https://node-main-erbium.projectneura.org
+```
+
+Pass it with `--env_file ./erbium.env` when running `docker create`. Without it, notifications are disabled.
+
+### Create the First Administrator
+
+After the container is running:
+
+```shell
+docker exec -it ${SERVICE_NAME} /opt/erbium/venv/bin/python -m erbium user add ${USERNAME} --admin
+```
+
+Further accounts can be created from the admin page at `/admin`, or with `erbium user add` / `passwd` / `remove` /
+`list`. Accounts, the queue, and settings are stored in `/var/lib/erbium` on a dedicated Docker volume.
 
 ## Using Erbium as a Resource Monitor
 

@@ -9,9 +9,9 @@ from pynvml import nvmlInit, nvmlDeviceGetCount, nvmlDeviceGetHandleByIndex, nvm
 class GPUInfo(object):
     device_id: int
     name: str
-    utilization_percent: float
+    utilization_percent: float | None
     memory_utilization_percent: float
-    power_draw_w: float
+    power_draw_w: float | None
     clock_speed_mhz: float | None
     memory_clock_speed_mhz: float | None
     total_memory_gb: float
@@ -31,18 +31,18 @@ def _mem_clock_speed(handle: struct_c_nvmlDevice_t) -> float | None:
         return None
 
 
-def _utilization_percent(handle: struct_c_nvmlDevice_t) -> float:
+def _utilization_percent(handle: struct_c_nvmlDevice_t) -> float | None:
     try:
         return nvmlDeviceGetUtilizationRates(handle).gpu
     except Exception:
-        return float("nan")
+        return None
 
 
-def _power_draw_w(handle: struct_c_nvmlDevice_t) -> float:
+def _power_draw_w(handle: struct_c_nvmlDevice_t) -> float | None:
     try:
         return nvmlDeviceGetPowerUsage(handle) / 1000
     except Exception:
-        return float("nan")
+        return None
 
 
 def get_all_gpu_info() -> dict[int, GPUInfo]:

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/ProjectNeura/ProjectNeura/refs/heads/master/img/logo.svg" />
+  <title>Erbium Admin</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <div class="container">
+      <header class="topbar fade-up">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div class="brand-copy">
+            <strong>Erbium Admin</strong>
+            <span id="signedInAs">Administrator</span>
+          </div>
+        </div>
+        <nav class="nav" aria-label="Sections">
+          <a href="#jobs">Jobs</a>
+          <a href="#users">Users</a>
+          <a href="#settings">Settings</a>
+          <a href="#packages">Packages</a>
+          <a href="/dash">Dashboard</a>
+          <button id="logoutButton" class="small-button ghost-button" type="button">Sign out</button>
+        </nav>
+      </header>
+
+      <section class="table-card fade-up" id="jobs" aria-labelledby="jobsHeading">
+        <div class="section-heading">
+          <div>
+            <h2 class="section-title" id="jobsHeading">Running and queued jobs</h2>
+            <p class="section-copy">Stop or remove any job, change its run time, or reorder the queue. Changing the run
+              time of the running job moves its end time.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th scope="col">Position</th>
+                <th scope="col">Job</th>
+                <th scope="col">Owner</th>
+                <th scope="col">Starts / ends</th>
+                <th scope="col">Run time (h)</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="jobsBody"></tbody>
+          </table>
+          <div class="queue-empty" id="jobsEmpty">Loading...</div>
+        </div>
+        <div class="feedback info" id="jobsFeedback"></div>
+      </section>
+
+      <section class="table-card fade-up" aria-labelledby="historyHeading">
+        <div class="section-heading">
+          <div>
+            <h2 class="section-title" id="historyHeading">Recent history</h2>
+            <p class="section-copy">The last 50 finished or cancelled jobs.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th scope="col">Job</th>
+                <th scope="col">Owner</th>
+                <th scope="col">Started</th>
+                <th scope="col">Ended</th>
+                <th scope="col">Reason</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="table-card fade-up" id="users" aria-labelledby="usersHeading">
+        <div class="section-heading">
+          <div>
+            <h2 class="section-title" id="usersHeading">Users</h2>
+            <p class="section-copy">Deleting a user also removes their jobs and stops their running session.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th scope="col">Username</th>
+                <th scope="col">Email</th>
+                <th scope="col">Role</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersBody"></tbody>
+          </table>
+        </div>
+        <div class="feedback info" id="usersFeedback"></div>
+      </section>
+
+      <section class="section forms-grid">
+        <article class="glass-card form-card fade-up">
+          <div class="eyebrow">New user</div>
+          <h3>Create an account</h3>
+          <form id="createUserForm">
+            <label>
+              Username
+              <input id="newUsername" type="text" autocomplete="off" autocapitalize="off" pattern="[a-z0-9][a-z0-9_.\-]{1,31}" required />
+            </label>
+            <label>
+              Initial password
+              <input id="newUserPassword" type="password" autocomplete="new-password" minlength="8" required />
+            </label>
+            <label>
+              Email (optional)
+              <input id="newUserEmail" type="email" autocomplete="off" />
+            </label>
+            <label class="check-row">
+              <input id="newUserAdmin" type="checkbox" />
+              <span>Administrator</span>
+            </label>
+            <button id="createUserButton" type="submit">Create user</button>
+            <div class="feedback info" id="createUserFeedback"></div>
+          </form>
+        </article>
+
+        <article class="glass-card form-card fade-up delay-1">
+          <div class="eyebrow">Edit user</div>
+          <h3>Email and role</h3>
+          <form id="editUserForm">
+            <label>
+              User
+              <select id="editUsername" class="user-select" required></select>
+            </label>
+            <label>
+              Email (optional)
+              <input id="editUserEmail" type="email" autocomplete="off" />
+            </label>
+            <label class="check-row">
+              <input id="editUserAdmin" type="checkbox" />
+              <span>Administrator</span>
+            </label>
+            <button id="editUserButton" class="secondary-button" type="submit">Save user</button>
+            <div class="feedback info" id="editUserFeedback"></div>
+          </form>
+        </article>
+
+        <article class="glass-card form-card fade-up delay-2">
+          <div class="eyebrow">Reset password</div>
+          <h3>Set a new password</h3>
+          <form id="resetPasswordForm">
+            <label>
+              User
+              <select id="resetUsername" class="user-select" required></select>
+            </label>
+            <label>
+              New password
+              <input id="resetPassword" type="password" autocomplete="new-password" minlength="8" required />
+            </label>
+            <div class="help-line">The user is signed out of every session.</div>
+            <button id="resetPasswordButton" class="secondary-button" type="submit">Reset password</button>
+            <div class="feedback info" id="resetPasswordFeedback"></div>
+          </form>
+        </article>
+      </section>
+
+      <section class="section forms-grid two-column">
+        <article class="glass-card form-card fade-up" id="settings">
+          <div class="eyebrow">Scheduler</div>
+          <h3>Limits</h3>
+          <form id="settingsForm">
+            <div class="field-grid">
+              <label>
+                Max run time per job (hours)
+                <input id="maxRunTime" type="number" min="0.25" step="0.25" required />
+              </label>
+              <label>
+                Active jobs per user
+                <input id="maxJobsPerUser" type="number" min="1" step="1" required />
+              </label>
+              <label>
+                Max queue length
+                <input id="maxQueueLength" type="number" min="1" step="1" required />
+              </label>
+              <label>
+                Ending notice (minutes)
+                <input id="endingNotice" type="number" min="0" step="1" required />
+              </label>
+            </div>
+            <div class="help-line">Limits apply to new reservations. Existing jobs keep their run time.</div>
+            <button id="settingsButton" type="submit">Save limits</button>
+            <div class="feedback info" id="settingsFeedback"></div>
+          </form>
+        </article>
+
+        <article class="glass-card form-card fade-up delay-1" id="packages">
+          <div class="eyebrow">Node packages</div>
+          <h3>Install apt packages</h3>
+          <form id="aptForm">
+            <label>
+              Packages
+              <input id="aptPackages" type="text" autocomplete="off" placeholder="htop nvtop" required />
+            </label>
+            <div class="help-line">Separate package names with spaces or commas. Runs apt-get install as root in the container.</div>
+            <button id="aptButton" class="secondary-button" type="submit">Install packages</button>
+            <div class="feedback info" id="aptFeedback"></div>
+          </form>
+        </article>
+      </section>
+    </div>
+  </div>
+  <script src="/assets/common.js"></script>
+  <script src="/assets/admin.js"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
+from math import isnan
 from multiprocessing import Process
 from os import PathLike, makedirs
 from time import sleep
@@ -90,6 +91,7 @@ class ResourceMonitor(object):
 
     @staticmethod
     def _summarize(values: list[float]) -> tuple[float, float, float] | None:
+        values = [value for value in values if not isnan(value)]
         if not values:
             return None
         return min(values), sum(values) / len(values), max(values)
@@ -131,7 +133,7 @@ class ResourceMonitor(object):
                 self._cpu_util[device].append(info.utilization_percent)
                 self._cpu_mem_util[device].append(info.memory_utilization_percent)
             for device, info in get_all_gpu_info().items():
-                self._gpu_util[device].append(info.utilization_percent)
+                self._gpu_util[device].append(float("nan") if info.utilization_percent is None else info.utilization_percent)
                 self._gpu_mem_util[device].append(info.memory_utilization_percent)
             self.make_plots(f"{self._report_dir}/{self._timestamps[0].strftime('%Y-%m-%d_%H:%M:%S')}.png")
             self.make_report(f"{self._report_dir}/{self._timestamps[0].strftime('%Y-%m-%d_%H:%M:%S')}.txt")

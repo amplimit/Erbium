@@ -4,12 +4,14 @@ services:
     hostname: erbium
     container_name: erbium
     networks: [labnet]
+    init: true
     volumes:
       - erbium_app:/workspace/app
       - erbium_venv:/workspace/venv
       - erbium_pvenvs:/workspace/pvenvs
       - erbium_codex:/home/access/.codex
       - erbium_claude:/home/access/.claude
+      - erbium_state:/var/lib/erbium
       - ./motd:/etc/motd:ro
       - ./venv.sh:/etc/profile.d/venv.sh:ro
       # ERBIUM_BACKUP_SECTION_START
@@ -21,10 +23,14 @@ services:
       # ERBIUM_BACKUP_SECTION_START
       - S:/erbium_backup:/workspace/backup
       # ERBIUM_BACKUP_SECTION_END
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    ipc: host
+    # ERBIUM_ENV_SECTION_START
+    env_file:
+      - ERBIUM_ENV_FILE
+    # ERBIUM_ENV_SECTION_END
+    shm_size: 16gb
+    pids_limit: 8192
+    security_opt:
+      - no-new-privileges:true
     ulimits:
       memlock: -1
       stack: 67108864
@@ -46,28 +52,40 @@ services:
               set -e
               apt-get update && apt-get upgrade -y && apt-get autoremove -y
               DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl unzip zip wget git gnupg openssh-server python3.12 python3.12-venv tmux vim borgbackup nodejs npm bubblewrap
-              (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) && sudo mkdir -p -m 755 /etc/apt/keyrings && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && sudo mkdir -p -m 755 /etc/apt/sources.list.d && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && sudo apt update && sudo apt install gh -y
+              install -d -m 755 /etc/apt/keyrings /etc/apt/sources.list.d
+              curl -fsSL -o /etc/apt/keyrings/githubcli-archive-keyring.gpg https://cli.github.com/packages/githubcli-archive-keyring.gpg
+              chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+              echo "deb [arch=$$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
+              apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gh
               npm i -g @openai/codex @anthropic-ai/claude-code
               npm update -g @openai/codex @anthropic-ai/claude-code
               mkdir -p /var/run/sshd
               id -u access >/dev/null 2>&1 || useradd -m -s /bin/bash access
-              echo "access:sshpassword" | chpasswd
-              cp -a /etc/skel/. /home/access/
+              usermod -p "*" access
               groupadd -f video
               groupadd -f render
               usermod -aG video,render access || true
               chown access:access /home/access /workspace/app /workspace/output /workspace/venv /workspace/pvenvs
               chown -R access:access /home/access/.codex /home/access/.claude
+              chown root:root /var/lib/erbium
+              chmod 700 /var/lib/erbium
+              install -d -o root -g root -m 755 /etc/erbium /etc/erbium/authorized_keys
               su - access -c "mkdir -p ~/.claude/skills/use-erbium ~/.codex/skills/use-erbium"
               su - access -c "ln -sfn /opt/erbium-skills/use-erbium/SKILL.md ~/.claude/skills/use-erbium/SKILL.md"
               su - access -c "ln -sfn /opt/erbium-skills/use-erbium/SKILL.md ~/.codex/skills/use-erbium/SKILL.md"
               su - access -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
+              curl -LsSf https://astral.sh/uv/install.sh | sh
               if [ ! -x /workspace/venv/bin/python ] || ! su - access -c "/workspace/venv/bin/python -c \"import sys\"" >/dev/null 2>&1; then
                 rm -rf /workspace/venv/* /workspace/venv/.[!.]* /workspace/venv/..?*
                 su - access -c "uv venv --python python3.12 /workspace/venv"
               fi
               if [ ! -x /workspace/venv/bin/jupyter ] || ! su - access -c "/workspace/venv/bin/python -c \"import erbium, torch, torchvision, jupyterlab, jupyter_server\"" >/dev/null 2>&1; then
-                su - access -c "uv pip install --python /workspace/venv/bin/python --upgrade torch torchvision jupyterlab jupyter-archive git+https://github.com/ProjectNeura/Erbium"
+                su - access -c "uv pip install --python /workspace/venv/bin/python --upgrade torch torchvision jupyterlab jupyter-archive git+https://github.com/amplimit/Erbium"
+              fi
+              if ! /opt/erbium/venv/bin/python -c "import erbium" >/dev/null 2>&1; then
+                rm -rf /opt/erbium/venv
+                /root/.local/bin/uv venv --python python3.12 /opt/erbium/venv
+                /root/.local/bin/uv pip install --python /opt/erbium/venv/bin/python git+https://github.com/amplimit/Erbium
               fi
               # ERBIUM_BACKUP_SECTION_START
               chown root:root /workspace/backup
@@ -82,13 +100,11 @@ services:
                 done
               ) &
               # ERBIUM_BACKUP_SECTION_END
-              echo "PermitRootLogin no" >> /etc/ssh/sshd_config
-              echo "PubkeyAuthentication no" >> /etc/ssh/sshd_config
-              echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
-              echo "AllowUsers access" >> /etc/ssh/sshd_config
+              printf "%s\n" "PermitRootLogin no" "PubkeyAuthentication yes" "PasswordAuthentication yes" "KbdInteractiveAuthentication no" "AuthorizedKeysFile /etc/erbium/authorized_keys/%u" "AllowUsers access" > /etc/ssh/sshd_config.d/erbium.conf
+              : > /etc/erbium/authorized_keys/access
+              chmod 644 /etc/erbium/authorized_keys/access
               /usr/sbin/sshd
-              su - access -c "/workspace/venv/bin/jupyter lab --no-browser --port=8080 --ip=0.0.0.0 --ServerApp.root_dir=/workspace --ServerApp.trust_xheaders=True --ServerApp.allow_remote_access=True" &
-              /workspace/venv/bin/python -m erbium server run -p 8000
+              /opt/erbium/venv/bin/python -m erbium server run -p 8000
             '
     restart: no
 networks:
@@ -100,3 +116,4 @@ volumes:
   erbium_pvenvs:
   erbium_codex:
   erbium_claude:
+  erbium_state:

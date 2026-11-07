@@ -27,8 +27,8 @@ def list_docker_profiles(root_dir: str | PathLike[str]) -> dict[str, dict[str, A
     return r
 
 
-def create_docker_profile(root_dir: str | PathLike[str], service_name: str, password: str, **kwargs) -> None:
+def create_docker_profile(root_dir: str | PathLike[str], service_name: str, **kwargs: Any) -> None:
     with open(f"{docker_profiles_dir(root_dir)}/{service_name}.yaml", "w") as f:
-        f.write(create_docker_compose(service_name, password, **kwargs))
+        f.write(create_docker_compose(service_name, **kwargs))
     with open(f"{docker_profiles_dir(root_dir)}/{service_name}.json", "w") as f:
-        dump({"service_name": service_name, "password": password, **kwargs}, f)
+        dump({"service_name": service_name, **kwargs}, f)
