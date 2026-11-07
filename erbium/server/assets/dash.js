@@ -302,8 +302,10 @@
     try {
       state.telemetry = await erbium.api("GET", "/api/telemetry");
       renderTelemetry();
-      indicator.textContent = "Live";
-      indicator.classList.remove("paused");
+      if (!document.hidden) {
+        indicator.textContent = "Live";
+        indicator.classList.remove("paused");
+      }
     } catch (error) {
       indicator.textContent = "Reconnecting";
       indicator.classList.add("paused");
