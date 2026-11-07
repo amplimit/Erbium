@@ -95,10 +95,12 @@ __TERMS_TO_BE_REPLACED__: dict[str, tuple[str, Callable[[Any], str]]] = {
 __OPTIONAL_TERMS__: tuple[str, ...] = ("backup_dir", "env_file")
 
 
-def _site_packages_path(path: str | PathLike[str]) -> str:
+def _site_packages_path(path: str | PathLike[str], *, versioned: bool) -> str:
     value = str(path).replace("\\", "/").rstrip("/")
-    if not fullmatch(r"(/[\w.+-]+)+/lib/python3(\.\d+)?/(dist|site)-packages", value):
-        raise ValueError(f"Expected an absolute path ending in lib/python3[.X]/dist-packages or site-packages, got {path}")
+    version = r"\.\d+" if versioned else r"(\.\d+)?"
+    if not fullmatch(rf"(/[\w.+-]+)+/lib/python3{version}/(dist|site)-packages", value):
+        expected = "lib/python3.X" if versioned else "lib/python3[.X]"
+        raise ValueError(f"Expected an absolute path ending in {expected}/dist-packages or site-packages, got {path}")
     return value
 
 
@@ -134,7 +136,7 @@ def create_docker_compose(service_name: str, *, base_image: str = __DEFAULT_BASE
     template = _set_section_enabled(template, __ENV_SECTION__, env_file is not None)
     if isinstance(host_site_packages, (str, PathLike)):
         host_site_packages = [host_site_packages]
-    site_packages = [_site_packages_path(path) for path in host_site_packages or ()]
+    site_packages = [_site_packages_path(path, versioned=index == 0) for index, path in enumerate(host_site_packages or ())]
     template = _set_section_enabled(template, __HOST_PACKAGES_SECTION__, bool(site_packages))
     if site_packages:
         primary, extras = site_packages[0], site_packages[1:]
