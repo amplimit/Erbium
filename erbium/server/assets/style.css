@@ -592,9 +592,11 @@ input[type="checkbox"] {
   margin-top: 6px;
 }
 
-.hint {
+.hint,
+.field > .hint {
   color: var(--text-subtle);
   font-size: 0.8rem;
+  font-weight: 400;
 }
 
 .form-actions {
