@@ -2,7 +2,8 @@ from dataclasses import dataclass
 
 from pynvml import nvmlInit, nvmlDeviceGetCount, nvmlDeviceGetHandleByIndex, nvmlDeviceGetName, \
     nvmlDeviceGetClockInfo, NVML_CLOCK_GRAPHICS, NVML_CLOCK_MEM, nvmlDeviceGetMemoryInfo, nvmlDeviceGetFanSpeed, \
-    nvmlDeviceGetUtilizationRates, nvmlDeviceGetPowerUsage, nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU,     struct_c_nvmlDevice_t
+    nvmlDeviceGetUtilizationRates, nvmlDeviceGetPowerUsage, nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU, \
+    struct_c_nvmlDevice_t
 
 
 @dataclass
