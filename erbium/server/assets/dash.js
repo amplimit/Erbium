@@ -38,7 +38,7 @@
 
   function renderConnect() {
     document.querySelectorAll(".os-tabs .tab").forEach((tab) => {
-      tab.setAttribute("aria-selected", String(tab.dataset.os === state.os));
+      tab.setAttribute("aria-pressed", String(tab.dataset.os === state.os));
     });
     $("installCommand").innerHTML = erbium.codeBlock(INSTALL_COMMANDS[state.os], "install command");
     $("sshConfig").innerHTML = erbium.codeBlock(

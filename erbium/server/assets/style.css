@@ -7,6 +7,10 @@
   --brand-strong: #0037cc;
   --brand-cyan: #0096d6;
   --brand-soft: rgba(0, 69, 255, 0.08);
+  --button: #0045ff;
+  --button-hover: #0037cc;
+  --button-danger: #c9302c;
+  --button-danger-hover: #a92521;
 
   --bg: #f4f6fb;
   --bg-glow: radial-gradient(1200px 520px at 12% -10%, rgba(0, 150, 214, 0.10), transparent 60%),
@@ -43,6 +47,10 @@
     --brand-strong: #6e93ff;
     --brand-cyan: #2fd3ff;
     --brand-soft: rgba(77, 124, 255, 0.14);
+    --button: #3358e0;
+    --button-hover: #2847c2;
+    --button-danger: #d42a2a;
+    --button-danger-hover: #b31f1f;
 
     --bg: #050a1c;
     --bg-glow: radial-gradient(1200px 520px at 12% -10%, rgba(0, 200, 255, 0.10), transparent 60%),
@@ -220,7 +228,12 @@ p {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
   margin-left: auto;
+}
+
+[id] {
+  scroll-margin-top: calc(var(--header-height) + 16px);
 }
 
 .app-nav a,
@@ -603,7 +616,7 @@ input[type="checkbox"] {
   padding: 0 16px;
   border: 1px solid transparent;
   border-radius: var(--radius-small);
-  background: var(--brand);
+  background: var(--button);
   color: #ffffff;
   font: inherit;
   font-size: 0.9rem;
@@ -615,7 +628,7 @@ input[type="checkbox"] {
 }
 
 .btn:hover {
-  background: var(--brand-strong);
+  background: var(--button-hover);
   text-decoration: none;
 }
 
@@ -653,12 +666,12 @@ input[type="checkbox"] {
 }
 
 .btn-danger {
-  background: var(--danger);
+  background: var(--button-danger);
   color: #ffffff;
 }
 
 .btn-danger:hover {
-  background: var(--danger-strong);
+  background: var(--button-danger-hover);
 }
 
 .btn-small {
@@ -862,7 +875,7 @@ input[type="checkbox"] {
   font-size: 0.8rem;
 }
 
-.os-tabs .tab[aria-selected="true"] {
+.os-tabs .tab[aria-pressed="true"] {
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
@@ -1210,8 +1223,13 @@ td.muted {
   }
 
   .brand-node,
-  .user-name {
+  .user-name,
+  .nav-section {
     display: none;
+  }
+
+  .user-chip {
+    padding-left: 10px;
   }
 
   .page {

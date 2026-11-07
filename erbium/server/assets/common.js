@@ -177,20 +177,29 @@ const erbium = (() => {
     return host ? host.split(".")[0].replace(/-erbium$/, "") : null;
   }
 
+  function flash(button, iconName, label) {
+    const original = { html: button.innerHTML, label: button.getAttribute("aria-label"), title: button.title };
+    button.innerHTML = icon(iconName);
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    window.setTimeout(() => {
+      button.innerHTML = original.html;
+      button.setAttribute("aria-label", original.label || "Copy");
+      button.title = original.title;
+    }, 1600);
+  }
+
   async function copy(text, button) {
     try {
       await navigator.clipboard.writeText(text);
       if (button) {
-        const original = button.innerHTML;
-        button.innerHTML = icon("check");
-        button.setAttribute("aria-label", "Copied");
-        window.setTimeout(() => {
-          button.innerHTML = original;
-          button.setAttribute("aria-label", "Copy");
-        }, 1400);
+        flash(button, "check", "Copied");
       }
       return true;
     } catch (error) {
+      if (button) {
+        flash(button, "close", "Copy failed; select the text and copy it manually");
+      }
       return false;
     }
   }

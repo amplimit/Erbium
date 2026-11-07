@@ -18,8 +18,8 @@
       </a>
       <nav class="app-nav" aria-label="Primary">
         <a href="/dash" aria-current="page">Dashboard</a>
-        <a href="#connect">Connect</a>
-        <a href="#account">Account</a>
+        <a class="nav-section" href="#connect">Connect</a>
+        <a class="nav-section" href="#account">Account</a>
         <a href="/admin" id="adminLink" hidden>Admin</a>
         <div class="user-chip">
           <span class="avatar" id="userAvatar" aria-hidden="true"></span>
@@ -38,7 +38,7 @@
         <h1>Dashboard</h1>
         <p>Reserve the node, then connect when it is your turn.</p>
       </div>
-      <span class="updated" id="lastUpdated" aria-live="polite">Loading...</span>
+      <span class="updated" id="lastUpdated">Loading...</span>
     </div>
 
     <div class="banner" id="liveBanner" role="status" hidden>Live data is unavailable. Retrying automatically.</div>
@@ -67,7 +67,7 @@
     </section>
 
     <div class="stack">
-      <section class="card session" id="session" aria-labelledby="sessionHeading" aria-live="polite">
+      <section class="card session" id="session" aria-labelledby="sessionHeading">
         <h2 class="sr-only" id="sessionHeading">My session</h2>
         <div id="sessionContent">
           <div class="empty">Loading your session...</div>
@@ -119,7 +119,7 @@
                 <p>Memory includes processes outside Erbium.</p>
               </div>
             </div>
-            <div class="card-body" id="gpuList" aria-live="polite"></div>
+            <div class="card-body" id="gpuList"></div>
           </section>
         </div>
       </div>
@@ -136,10 +136,10 @@
             <li>
               <h3>Install cloudflared</h3>
               <p>The Cloudflare client carries SSH over HTTPS.</p>
-              <div class="os-tabs" role="tablist" aria-label="Operating system">
-                <button class="tab" type="button" role="tab" data-os="windows" aria-selected="true">Windows</button>
-                <button class="tab" type="button" role="tab" data-os="macos" aria-selected="false">macOS</button>
-                <button class="tab" type="button" role="tab" data-os="linux" aria-selected="false">Linux</button>
+              <div class="os-tabs" role="group" aria-label="Operating system">
+                <button class="tab" type="button" data-os="windows" aria-pressed="true">Windows</button>
+                <button class="tab" type="button" data-os="macos" aria-pressed="false">macOS</button>
+                <button class="tab" type="button" data-os="linux" aria-pressed="false">Linux</button>
               </div>
               <div id="installCommand"></div>
             </li>
