@@ -62,18 +62,23 @@ To use other nodes, simply replace "main" with the name of the node.
 
 ### Clone the Repository
 
+Keep the deployment in a root-owned directory, because the generated Compose file mounts files from it into the
+container:
+
 ```shell
-git clone https://github.com/amplimit/Erbium
+sudo git clone https://github.com/amplimit/Erbium /opt/erbium-deploy/Erbium
 ```
 
 ### Install the Dependencies
 
 ```shell
-cd Erbium
-python -m venv venv
-source venv/bin/activate
-pip install -e .
+sudo python3 -m venv /opt/erbium-deploy/venv
+sudo /opt/erbium-deploy/venv/bin/pip install -e /opt/erbium-deploy/Erbium
+cd /opt/erbium-deploy/Erbium
 ```
+
+The remaining commands run from this directory as root, for example with `sudo /opt/erbium-deploy/venv/bin/python -m
+erbium ...`.
 
 ### Set Up Cloudflare Tunnel
 
@@ -88,7 +93,7 @@ python -m erbium docker init
 
 ### Build a Docker Image
 
-> This step is required if you want to update Erbium
+> Rerun this step after pulling a new version of the repository or changing any of the options below
 
 ```shell
 python -m erbium docker create -n ${SERVICE_NAME} ${INPUT_DIR} ${OUTPUT_DIR} ${BACKUP_DIR} ./docker-compose.yaml
@@ -114,10 +119,27 @@ packages are available on `PATH`. The mounted packages cannot be modified from t
 
 ### Start the Docker Container
 
-> This step is required if you want to update Erbium
-
 ```shell
 python -m erbium docker run ./docker-compose.yaml ${SERVICE_NAME}
+```
+
+The container restarts automatically after crashes and host reboots (`restart: unless-stopped`). Every start reruns the
+setup script, so it takes a few minutes before the dashboard is reachable again. Only the reservation survives a
+restart: the running job is granted again with the same credentials, but every process in the container is killed and
+the downtime counts toward the reserved time, so long runs should checkpoint to `/workspace/output`.
+
+The Compose project is named `erbium-${SERVICE_NAME}`. Its volumes keep `/home/access` (including `pip install --user`
+additions), `/workspace/app`, `/workspace/venv`, `/workspace/pvenvs`, and `/var/lib/erbium` (accounts, the queue, and
+settings) when the container is recreated; everything else in the container is rebuilt from the image. Stop the
+container with `docker compose -f ./docker-compose.yaml stop`, and never pass `-v` to `docker compose down`, which
+deletes these volumes.
+
+Deployments created before the project name was fixed use volumes prefixed with the old project name (the name of the
+directory that held the Compose file, for example `erbium_`). Before starting such a node with a new Compose file,
+remove the old container with `docker rm -f ${SERVICE_NAME}` and copy every old volume into its new name, for example:
+
+```shell
+docker run --rm -v erbium_erbium_state_${SERVICE_NAME}:/from -v erbium-${SERVICE_NAME}_erbium_state_${SERVICE_NAME}:/to ubuntu:26.04 cp -a /from/. /to/
 ```
 
 ### Configure Email Notifications (Optional)
@@ -142,6 +164,19 @@ docker exec -it ${SERVICE_NAME} /opt/erbium/venv/bin/python -m erbium user add $
 
 Further accounts can be created from the admin page at `/admin`, or with `erbium user add` / `passwd` / `remove` /
 `list`. Accounts, the queue, and settings are stored in `/var/lib/erbium` on a dedicated Docker volume.
+
+### Update Erbium
+
+The container installs the Erbium server from the `main` branch the first time it starts. To update it, reinstall it
+inside the container and restart:
+
+```shell
+docker exec ${SERVICE_NAME} /root/.local/bin/uv pip install --python /opt/erbium/venv/bin/python --reinstall-package erbium git+https://github.com/amplimit/Erbium
+docker restart ${SERVICE_NAME}
+```
+
+Changes to the Compose template, such as new mounts or options, additionally require pulling the repository in
+`/opt/erbium-deploy/Erbium`, rerunning `docker create`, and starting the container again with `docker run`.
 
 ## Using Erbium as a Resource Monitor
 

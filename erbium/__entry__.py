@@ -114,6 +114,9 @@ def __entry__() -> None:
                         run_command(command_to_initialize_docker(f.read().strip(), protocol=args.protocol,
                                                                  shared_network=args.shared_network))
                 case "create":
+                    if not fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", args.service_name):
+                        docker_create.error("service names must be 1 to 63 characters of a-z, 0-9, '_' and '-', "
+                                            "starting with a letter or digit")
                     expected_path_count = 3 if args.no_backup else 4
                     if len(args.paths) != expected_path_count:
                         docker_create.error(
