@@ -242,9 +242,9 @@ def _require(job: Job | None, detail: str) -> Job:
 def _public_routes() -> APIRouter:
     router = APIRouter()
 
-    @router.get("/", response_class=HTMLResponse)
-    def index(request: Request) -> HTMLResponse:
-        return HTMLResponse(_runtime(request).pages["index"])
+    @router.get("/")
+    def index() -> RedirectResponse:
+        return RedirectResponse("/dash", status_code=303)
 
     @router.get("/login", response_class=HTMLResponse)
     def login_page(request: Request) -> HTMLResponse:
@@ -454,7 +454,7 @@ def _admin_routes() -> APIRouter:
 def create_app(node: Node) -> FastAPI:
     app = FastAPI(title="Erbium Server", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.runtime = Runtime(node, LoginThrottle(), BoundedSemaphore(2), {
-        name: (ASSETS_DIR / f"{name}.html").read_text(encoding="utf-8") for name in ("index", "login", "dash", "admin")
+        name: (ASSETS_DIR / f"{name}.html").read_text(encoding="utf-8") for name in ("login", "dash", "admin")
     })
 
     @app.middleware("http")
