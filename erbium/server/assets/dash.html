@@ -3,217 +3,228 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Erbium Dashboard</title>
+  <title>Dashboard · Erbium</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
   <link rel="stylesheet" href="/assets/style.css" />
 </head>
 <body>
-  <div class="page-shell">
-    <div class="container">
-      <header class="topbar fade-up">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div class="brand-copy">
-            <strong>Erbium</strong>
-            <span id="signedInAs">Signed in</span>
-          </div>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <a class="brand" href="/dash" aria-label="Erbium dashboard">
+        <img class="brand-logo" src="/assets/logo.svg" alt="" />
+        <span class="brand-name">Erbium</span>
+        <span class="brand-node" id="brandNode"></span>
+      </a>
+      <nav class="app-nav" aria-label="Primary">
+        <a href="/dash" aria-current="page">Dashboard</a>
+        <a class="nav-section" href="#connect">Connect</a>
+        <a class="nav-section" href="#account">Account</a>
+        <a href="/admin" id="adminLink" hidden>Admin</a>
+        <div class="user-chip">
+          <span class="avatar" id="userAvatar" aria-hidden="true"></span>
+          <span class="user-name" id="userName"></span>
+          <button class="icon-btn" id="logoutButton" type="button" aria-label="Sign out" title="Sign out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+          </button>
         </div>
-        <nav class="nav" aria-label="Sections">
-          <a href="#overview">Overview</a>
-          <a href="#session">My session</a>
-          <a href="#join">Join</a>
-          <a href="#settings">Settings</a>
-          <a href="#queue">Queue</a>
-          <a href="/admin" id="adminLink" hidden>Admin</a>
-          <button id="logoutButton" class="small-button ghost-button" type="button">Sign out</button>
-        </nav>
-      </header>
+      </nav>
+    </div>
+  </header>
 
-      <section class="hero" id="overview">
-        <div class="hero-panel fade-up delay-1">
-          <div class="eyebrow">Live scheduler visibility</div>
-          <h1>Reserve the node, then connect when it is your turn.</h1>
-          <p class="hero-copy">
-            Join the queue with a job name and the number of hours you need. When your reservation starts, this page
-            shows a one-time SSH password and a Jupyter link for that session. When the time is up, every process of
-            the session is stopped and the credentials stop working.
-          </p>
-          <div class="hero-points">
-            <div class="point">
-              <strong>One job at a time</strong>
-              <span>The whole node, including all GPUs, belongs to the running reservation.</span>
-            </div>
-            <div class="point">
-              <strong>Save to /workspace/output</strong>
-              <span>Processes are killed when time runs out. Only files on disk survive.</span>
-            </div>
-            <div class="point">
-              <strong>Get notified</strong>
-              <span>Add an email address in settings to hear when your job starts or is about to end.</span>
+  <main class="page" id="main">
+    <div class="page-header">
+      <div>
+        <h1>Dashboard</h1>
+        <p>Reserve the node, then connect when it is your turn.</p>
+      </div>
+      <span class="updated" id="lastUpdated">Loading...</span>
+    </div>
+
+    <div class="banner" id="liveBanner" role="status" hidden>Live data is unavailable. Retrying automatically.</div>
+
+    <section class="stats" aria-label="Node status">
+      <div class="card stat">
+        <div class="stat-label">Node</div>
+        <div class="stat-value" id="statNode">--</div>
+        <div class="stat-hint" id="statNodeHint">&nbsp;</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Estimated wait</div>
+        <div class="stat-value" id="statWait">--</div>
+        <div class="stat-hint">for a new reservation</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">Queue</div>
+        <div class="stat-value" id="statQueue">--</div>
+        <div class="stat-hint" id="statQueueHint">&nbsp;</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-label">GPU memory in use</div>
+        <div class="stat-value" id="statMemory">--</div>
+        <div class="stat-hint" id="statMemoryHint">&nbsp;</div>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="card session" id="session" aria-labelledby="sessionHeading">
+        <h2 class="sr-only" id="sessionHeading">My session</h2>
+        <div id="sessionContent">
+          <div class="empty">Loading your session...</div>
+        </div>
+        <div class="feedback info card-body" id="sessionFeedback" role="status"></div>
+      </section>
+
+      <div class="grid-main">
+        <section class="card" id="queue" aria-labelledby="queueHeading">
+          <div class="card-header">
+            <div>
+              <h2 id="queueHeading">Queue</h2>
+              <p>The running reservation and everyone waiting, in order.</p>
             </div>
           </div>
-        </div>
+          <div class="card-body">
+            <ul class="list" id="queueList"></ul>
+          </div>
+        </section>
 
-        <aside class="hero-aside fade-up delay-2" aria-label="System status">
+        <div class="stack">
+          <section class="card" id="join" aria-labelledby="joinHeading">
+            <div class="card-header">
+              <div>
+                <h2 id="joinHeading">Join the queue</h2>
+                <p id="joinLimits">&nbsp;</p>
+              </div>
+            </div>
+            <form class="card-body" id="joinForm">
+              <label class="field">
+                <span>Job name</span>
+                <input id="joinName" type="text" autocomplete="off" placeholder="nnunet-fold0" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9 _.\-]*" required />
+              </label>
+              <label class="field">
+                <span>Hours needed</span>
+                <input id="joinRunTime" type="number" min="0.25" step="0.25" placeholder="4" inputmode="decimal" required />
+              </label>
+              <div class="form-actions">
+                <button class="btn" id="joinButton" type="submit">Join queue</button>
+                <div class="feedback info" id="joinFeedback" role="status"></div>
+              </div>
+            </form>
+          </section>
+
+          <section class="card" aria-labelledby="gpuHeading">
+            <div class="card-header">
+              <div>
+                <h2 id="gpuHeading">GPUs</h2>
+                <p>Memory includes processes outside Erbium.</p>
+              </div>
+            </div>
+            <div class="card-body" id="gpuList"></div>
+          </section>
+        </div>
+      </div>
+
+      <section class="card" id="connect" aria-labelledby="connectHeading">
+        <div class="card-header">
           <div>
-            <div class="status-label">Estimated wait</div>
-            <div class="status-value" id="heroWaitTime">--</div>
+            <h2 id="connectHeading">Connect from your computer</h2>
+            <p>SSH runs through Cloudflare Tunnel. Set this up once; JupyterLab needs nothing but a browser.</p>
           </div>
-          <div class="status-grid">
-            <div class="status-block">
-              <div class="status-label">Queued jobs</div>
-              <div class="status-value" id="heroQueueDepth">--</div>
-            </div>
-            <div class="status-block">
-              <div class="status-label">Available GPUs</div>
-              <div class="status-value" id="heroAvailableGpus">--</div>
-            </div>
+        </div>
+        <div class="card-body grid-2">
+          <ol class="steps">
+            <li>
+              <h3>Install cloudflared</h3>
+              <p>The Cloudflare client carries SSH over HTTPS.</p>
+              <div class="os-tabs" role="group" aria-label="Operating system">
+                <button class="tab" type="button" data-os="windows" aria-pressed="true">Windows</button>
+                <button class="tab" type="button" data-os="macos" aria-pressed="false">macOS</button>
+                <button class="tab" type="button" data-os="linux" aria-pressed="false">Linux</button>
+              </div>
+              <div id="installCommand"></div>
+            </li>
+            <li>
+              <h3>Add the node to your SSH config</h3>
+              <p>Append this to <code>~/.ssh/config</code> (on Windows, <code>%USERPROFILE%\.ssh\config</code>).</p>
+              <div id="sshConfig"></div>
+            </li>
+            <li>
+              <h3>Connect when your session starts</h3>
+              <p>Use the one-time password shown above, or a public key saved in your account settings.</p>
+              <div id="sshCommand"></div>
+            </li>
+          </ol>
+          <div>
+            <div class="code-label">Copy files to the node</div>
+            <div id="scpUpload"></div>
+            <div class="code-label">Copy results back</div>
+            <div id="scpDownload"></div>
+            <div class="code-label">Before your time runs out</div>
+            <ul class="list">
+              <li class="list-item"><span class="list-meta">Save checkpoints and results under <code>/workspace/output</code>. Every process, including tmux, is killed when the session ends.</span></li>
+              <li class="list-item"><span class="list-meta">Packages installed with <code>pip install --user --break-system-packages</code> stay for everyone; the shared environment itself is read-only.</span></li>
+              <li class="list-item"><span class="list-meta">Need more time? An administrator can extend a running job.</span></li>
+            </ul>
           </div>
-          <p class="status-note" id="lastUpdated">Refreshing live data...</p>
-        </aside>
+        </div>
       </section>
 
-      <section class="section forms-grid two-column">
-        <article class="glass-card form-card fade-up" id="session">
-          <div class="eyebrow">My session</div>
-          <h3>Your reservations</h3>
-          <div class="running-summary" id="sessionSummary" aria-live="polite">
-            <div class="summary-empty">Loading...</div>
+      <div class="grid-2" id="account">
+        <section class="card" aria-labelledby="profileHeading">
+          <div class="card-header">
+            <div>
+              <h2 id="profileHeading">Notifications and SSH keys</h2>
+              <p>Keys are installed only while your reservation runs.</p>
+            </div>
           </div>
-          <div class="feedback info" id="sessionFeedback"></div>
-        </article>
-
-        <article class="glass-card form-card fade-up delay-1" id="join">
-          <div class="eyebrow">Join the waitlist</div>
-          <h3>Submit a new reservation</h3>
-          <p class="form-copy">
-            Request the time you actually need. The wait estimate for everyone behind you is the sum of the
-            requested run times ahead of them.
-          </p>
-          <form id="joinForm">
-            <label>
-              Job name
-              <input id="joinName" type="text" autocomplete="off" placeholder="vision-train-a100" maxlength="64" required />
-            </label>
-            <label>
-              Requested run time (hours)
-              <input id="joinRunTime" type="number" min="0.25" step="0.25" placeholder="4" required />
-            </label>
-            <div class="help-line" id="joinLimits"></div>
-            <button id="joinButton" type="submit">Join waitlist</button>
-            <div class="feedback info" id="joinFeedback"></div>
-          </form>
-        </article>
-      </section>
-
-      <section class="section forms-grid two-column" id="settings">
-        <article class="glass-card form-card fade-up">
-          <div class="eyebrow">Settings</div>
-          <h3>Notifications and SSH keys</h3>
-          <form id="profileForm">
-            <label>
-              Email
+          <form class="card-body" id="profileForm">
+            <label class="field">
+              <span>Email</span>
               <input id="profileEmail" type="email" autocomplete="email" placeholder="you@example.com" />
             </label>
-            <div class="check-grid" id="notificationChecks"></div>
-            <label>
-              SSH public keys (one per line, optional)
+            <fieldset class="field">
+              <legend class="label">Email me when</legend>
+              <div class="checks" id="notificationChecks"></div>
+            </fieldset>
+            <label class="field">
+              <span>SSH public keys, one per line</span>
               <textarea id="profileKeys" spellcheck="false" placeholder="ssh-ed25519 AAAA... you@laptop"></textarea>
             </label>
-            <div class="help-line">Keys are installed only while your reservation is running. The one-time password always works too.</div>
-            <button id="profileButton" type="submit">Save settings</button>
-            <div class="feedback info" id="profileFeedback"></div>
+            <div class="form-actions">
+              <button class="btn" id="profileButton" type="submit">Save settings</button>
+              <div class="feedback info" id="profileFeedback" role="status"></div>
+            </div>
           </form>
-        </article>
+        </section>
 
-        <article class="glass-card form-card fade-up delay-1">
-          <div class="eyebrow">Account</div>
-          <h3>Change password</h3>
-          <form id="passwordForm">
-            <label>
-              Current password
+        <section class="card" aria-labelledby="passwordHeading">
+          <div class="card-header">
+            <div>
+              <h2 id="passwordHeading">Change password</h2>
+              <p>This is your dashboard password. Changing it signs you out everywhere.</p>
+            </div>
+          </div>
+          <form class="card-body" id="passwordForm">
+            <label class="field">
+              <span>Current password</span>
               <input id="currentPassword" type="password" autocomplete="current-password" required />
             </label>
-            <label>
-              New password
+            <label class="field">
+              <span>New password</span>
               <input id="newPassword" type="password" autocomplete="new-password" minlength="8" required />
+              <span class="hint">At least 8 characters.</span>
             </label>
-            <div class="help-line">Changing your password signs you out everywhere.</div>
-            <button id="passwordButton" class="secondary-button" type="submit">Change password</button>
-            <div class="feedback info" id="passwordFeedback"></div>
+            <div class="form-actions">
+              <button class="btn btn-secondary" id="passwordButton" type="submit">Change password</button>
+              <div class="feedback info" id="passwordFeedback" role="status"></div>
+            </div>
           </form>
-        </article>
-      </section>
-
-      <section class="section" id="support">
-        <div class="support-grid">
-          <article class="support-card fade-up delay-1">
-            <h3>Connect with SSH</h3>
-            <p class="support-copy">SSH goes through Cloudflare Tunnel, so install <code>cloudflared</code> locally.</p>
-            <div class="command-panel">
-              <code class="command-code" id="sshCommand"></code>
-            </div>
-          </article>
-          <article class="support-card fade-up delay-2">
-            <h3>Transfer files with SCP</h3>
-            <div class="command-panel">
-              <div class="command-label">Upload to node</div>
-              <code class="command-code" id="scpUploadCommand"></code>
-              <div class="command-label">Download from node</div>
-              <code class="command-code" id="scpDownloadCommand"></code>
-            </div>
-          </article>
-          <article class="support-card fade-up delay-3">
-            <h3>Before your time runs out</h3>
-            <ul class="support-list">
-              <li>Write checkpoints and results under <code>/workspace/output/&lt;project&gt;</code>.</li>
-              <li>All processes of the session are killed when it ends, including tmux.</li>
-              <li>Ask an administrator if you need more time; they can extend a running job.</li>
-            </ul>
-          </article>
-        </div>
-      </section>
-
-      <section class="table-card fade-up delay-2" aria-labelledby="inventoryHeading">
-        <div class="section-heading">
-          <div>
-            <h2 class="section-title" id="inventoryHeading">GPU inventory</h2>
-            <p class="section-copy">Current device telemetry. Refreshes automatically.</p>
-          </div>
-        </div>
-        <div class="gpu-list" id="gpuList" aria-live="polite"></div>
-      </section>
-
-      <section class="table-card fade-up delay-2" id="queue" aria-labelledby="queueHeading">
-        <div class="section-heading">
-          <div>
-            <h2 class="section-title" id="queueHeading">Queue</h2>
-            <p class="section-copy">The running job and everything waiting behind it, in order.</p>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="queue-table">
-            <thead>
-              <tr>
-                <th scope="col">Position</th>
-                <th scope="col">Job</th>
-                <th scope="col">Owner</th>
-                <th scope="col">Run time</th>
-                <th scope="col">Starts / ends</th>
-                <th scope="col">Status</th>
-              </tr>
-            </thead>
-            <tbody id="queueBody"></tbody>
-          </table>
-          <div class="queue-empty" id="queueEmpty">Loading waitlist...</div>
-        </div>
-      </section>
-
-      <footer class="footer">
-        <span>Erbium</span>
-        <span>One reservation runs at a time. Credentials are issued per session.</span>
-      </footer>
+        </section>
+      </div>
     </div>
-  </div>
+
+    <footer class="footer">Erbium by amplimit · One reservation runs at a time · Credentials are issued per session</footer>
+  </main>
   <script src="/assets/common.js"></script>
   <script src="/assets/dash.js"></script>
 </body>

@@ -8,31 +8,49 @@
     admin_stopped: "Stopped by admin",
     admin_removed: "Removed by admin"
   };
+  const TABS = ["jobs", "users", "settings", "packages"];
   const state = { me: null, overview: null };
   const $ = (id) => document.getElementById(id);
   const esc = erbium.escapeHtml;
+  const icon = erbium.icon;
+
+  function selectTab(name, focus) {
+    const active = TABS.includes(name) ? name : "jobs";
+    TABS.forEach((tab) => {
+      const button = $(`tab-${tab}`);
+      button.setAttribute("aria-selected", String(tab === active));
+      button.tabIndex = tab === active ? 0 : -1;
+      $(`panel-${tab}`).hidden = tab !== active;
+    });
+    if (focus) {
+      $(`tab-${active}`).focus();
+    }
+    if (window.location.hash !== `#${active}`) {
+      window.history.replaceState(null, "", `#${active}`);
+    }
+  }
 
   function jobRow(job, position, time, isRunning, index, count) {
     const actions = isRunning
-      ? `<button class="small-button danger-button" type="button" data-action="stop" data-id="${job.id}">Stop</button>`
+      ? `<button class="btn btn-danger btn-small" type="button" data-action="stop" data-id="${job.id}">${icon("stop")}Stop</button>`
       : `
-        <button class="small-button ghost-button" type="button" data-action="move" data-offset="-1" data-id="${job.id}" ${index === 0 ? "disabled" : ""}>Up</button>
-        <button class="small-button ghost-button" type="button" data-action="move" data-offset="1" data-id="${job.id}" ${index === count - 1 ? "disabled" : ""}>Down</button>
-        <button class="small-button danger-button" type="button" data-action="remove" data-id="${job.id}">Remove</button>
+        <button class="icon-btn" type="button" data-action="move" data-offset="-1" data-id="${job.id}" aria-label="Move ${esc(job.name)} up" ${index === 0 ? "disabled" : ""}>${icon("up")}</button>
+        <button class="icon-btn" type="button" data-action="move" data-offset="1" data-id="${job.id}" aria-label="Move ${esc(job.name)} down" ${index === count - 1 ? "disabled" : ""}>${icon("down")}</button>
+        <button class="btn btn-ghost btn-small" type="button" data-action="remove" data-id="${job.id}">Remove</button>
       `;
     return `
       <tr>
-        <td>${position}</td>
-        <td class="queue-name">${esc(job.name)}</td>
+        <td>${isRunning ? '<span class="badge badge-running">Running</span>' : `<span class="position">#${position}</span>`}</td>
+        <td class="strong">${esc(job.name)}</td>
         <td>${esc(job.username)}</td>
-        <td>${erbium.formatTime(time)}</td>
+        <td class="muted">${erbium.formatTime(time)}</td>
         <td>
-          <div class="button-row">
-            <input type="number" min="0.25" step="0.25" value="${job.requested_run_time_hrs}" data-hours-for="${job.id}" aria-label="Run time in hours" />
-            <button class="small-button ghost-button" type="button" data-action="hours" data-id="${job.id}">Set</button>
+          <div class="inline-input">
+            <input type="number" min="0.25" step="0.25" value="${job.requested_run_time_hrs}" data-hours-for="${job.id}" aria-label="Hours for ${esc(job.name)}" />
+            <button class="btn btn-secondary btn-small" type="button" data-action="hours" data-id="${job.id}">Set</button>
           </div>
         </td>
-        <td><div class="button-row">${actions}</div></td>
+        <td><div class="row-actions">${actions}</div></td>
       </tr>
     `;
   }
@@ -41,31 +59,35 @@
     const { running, queue, history } = state.overview;
     const rows = [];
     if (running) {
-      rows.push(jobRow(running, "Running", running.ends_at, true, 0, 1));
+      rows.push(jobRow(running, 0, running.ends_at, true, 0, 1));
     }
-    queue.forEach((job, index) => rows.push(jobRow(job, String(index + 1), job.estimated_start, false, index, queue.length)));
+    queue.forEach((job, index) => rows.push(jobRow(job, index + 1, job.estimated_start, false, index, queue.length)));
     $("jobsBody").innerHTML = rows.join("");
-    $("jobsEmpty").textContent = rows.length ? "" : "Nothing is running or queued.";
+    $("jobsEmpty").hidden = rows.length > 0;
     $("historyBody").innerHTML = history.map((job) => `
       <tr>
-        <td class="queue-name">${esc(job.name)}</td>
+        <td class="strong">${esc(job.name)}</td>
         <td>${esc(job.username)}</td>
-        <td>${erbium.formatTime(job.started_at)}</td>
-        <td>${erbium.formatTime(job.ended_at)}</td>
+        <td class="muted">${erbium.formatTime(job.started_at)}</td>
+        <td class="muted">${erbium.formatTime(job.ended_at)}</td>
         <td>${esc(REASONS[job.end_reason] || job.end_reason || "--")}</td>
       </tr>
     `).join("");
+    $("historyEmpty").hidden = history.length > 0;
   }
 
   function renderUsers() {
     const users = state.overview.users;
     $("usersBody").innerHTML = users.map((user) => `
       <tr>
-        <td class="queue-name">${esc(user.username)}</td>
-        <td>${esc(user.email || "--")}</td>
-        <td>${user.is_admin ? "Administrator" : "Member"}</td>
+        <td class="strong">${esc(user.username)}${user.username === state.me.username ? ' <span class="mine">you</span>' : ""}</td>
+        <td class="muted">${esc(user.email || "--")}</td>
+        <td>${user.is_admin ? '<span class="badge badge-queued">Administrator</span>' : '<span class="badge">Member</span>'}</td>
+        <td class="muted">${erbium.formatTime(user.created_at)}</td>
         <td>
-          ${user.username === state.me.username ? "" : `<button class="small-button danger-button" type="button" data-action="delete-user" data-username="${esc(user.username)}">Delete</button>`}
+          <div class="row-actions">
+            ${user.username === state.me.username ? "" : `<button class="icon-btn" type="button" data-action="delete-user" data-username="${esc(user.username)}" aria-label="Delete ${esc(user.username)}">${icon("trash")}</button>`}
+          </div>
         </td>
       </tr>
     `).join("");
@@ -103,7 +125,27 @@
     if (settings) {
       renderSettings();
     }
+    $("lastUpdated").textContent = `Updated ${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" })}`;
   }
+
+  document.querySelector(".tabs").addEventListener("click", (event) => {
+    const tab = event.target.closest("button[data-tab]");
+    if (tab) {
+      selectTab(tab.dataset.tab, false);
+    }
+  });
+
+  document.querySelector(".tabs").addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+      return;
+    }
+    const current = TABS.findIndex((tab) => $(`tab-${tab}`).getAttribute("aria-selected") === "true");
+    const step = event.key === "ArrowRight" ? 1 : -1;
+    selectTab(TABS[(current + step + TABS.length) % TABS.length], true);
+    event.preventDefault();
+  });
+
+  window.addEventListener("hashchange", () => selectTab(window.location.hash.slice(1), false));
 
   $("jobsBody").addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
@@ -114,11 +156,11 @@
     const feedback = $("jobsFeedback");
     try {
       if (button.dataset.action === "stop") {
-        if (!window.confirm("Stop the running job? All of its processes will be killed.")) {
+        if (!window.confirm("Stop the running session? All of its processes will be killed.")) {
           return;
         }
         await erbium.api("POST", `/api/admin/jobs/${id}/stop`);
-        erbium.setFeedback(feedback, "success", "The running job is being stopped.");
+        erbium.setFeedback(feedback, "success", "The running session is being stopped.");
       } else if (button.dataset.action === "remove") {
         await erbium.api("DELETE", `/api/admin/jobs/${id}`);
         erbium.setFeedback(feedback, "success", "Job removed from the queue.");
@@ -213,8 +255,8 @@
   $("logoutButton").addEventListener("click", () => erbium.logout());
 
   (async () => {
+    selectTab(window.location.hash.slice(1), false);
     state.me = await erbium.loadMe();
-    $("signedInAs").textContent = `Signed in as ${state.me.username}`;
     await refresh({ settings: true });
     window.setInterval(() => {
       if (document.activeElement && document.activeElement.closest("form, #jobsBody")) {

@@ -3,66 +3,85 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Erbium Admin</title>
+  <title>Admin · Erbium</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
   <link rel="stylesheet" href="/assets/style.css" />
 </head>
 <body>
-  <div class="page-shell">
-    <div class="container">
-      <header class="topbar fade-up">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div class="brand-copy">
-            <strong>Erbium Admin</strong>
-            <span id="signedInAs">Administrator</span>
-          </div>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <a class="brand" href="/dash" aria-label="Erbium dashboard">
+        <img class="brand-logo" src="/assets/logo.svg" alt="" />
+        <span class="brand-name">Erbium</span>
+        <span class="brand-node" id="brandNode"></span>
+      </a>
+      <nav class="app-nav" aria-label="Primary">
+        <a href="/dash">Dashboard</a>
+        <a href="/admin" aria-current="page">Admin</a>
+        <div class="user-chip">
+          <span class="avatar" id="userAvatar" aria-hidden="true"></span>
+          <span class="user-name" id="userName"></span>
+          <button class="icon-btn" id="logoutButton" type="button" aria-label="Sign out" title="Sign out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+          </button>
         </div>
-        <nav class="nav" aria-label="Sections">
-          <a href="#jobs">Jobs</a>
-          <a href="#users">Users</a>
-          <a href="#settings">Settings</a>
-          <a href="#packages">Packages</a>
-          <a href="/dash">Dashboard</a>
-          <button id="logoutButton" class="small-button ghost-button" type="button">Sign out</button>
-        </nav>
-      </header>
+      </nav>
+    </div>
+  </header>
 
-      <section class="table-card fade-up" id="jobs" aria-labelledby="jobsHeading">
-        <div class="section-heading">
+  <main class="page" id="main">
+    <div class="page-header">
+      <div>
+        <h1>Administration</h1>
+        <p>Manage reservations, accounts, and scheduler limits.</p>
+      </div>
+      <span class="updated" id="lastUpdated">Loading...</span>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Admin sections">
+      <button class="tab" type="button" role="tab" id="tab-jobs" aria-controls="panel-jobs" data-tab="jobs">Jobs</button>
+      <button class="tab" type="button" role="tab" id="tab-users" aria-controls="panel-users" data-tab="users">Users</button>
+      <button class="tab" type="button" role="tab" id="tab-settings" aria-controls="panel-settings" data-tab="settings">Limits</button>
+      <button class="tab" type="button" role="tab" id="tab-packages" aria-controls="panel-packages" data-tab="packages">Packages</button>
+    </div>
+
+    <section class="stack" id="panel-jobs" role="tabpanel" aria-labelledby="tab-jobs">
+      <div class="card">
+        <div class="card-header">
           <div>
-            <h2 class="section-title" id="jobsHeading">Running and queued jobs</h2>
-            <p class="section-copy">Stop or remove any job, change its run time, or reorder the queue. Changing the run
-              time of the running job moves its end time.</p>
+            <h2>Running and queued</h2>
+            <p>Changing the run time of the running job moves its end time.</p>
           </div>
         </div>
         <div class="table-wrap">
-          <table class="queue-table">
+          <table>
             <thead>
               <tr>
                 <th scope="col">Position</th>
                 <th scope="col">Job</th>
                 <th scope="col">Owner</th>
                 <th scope="col">Starts / ends</th>
-                <th scope="col">Run time (h)</th>
-                <th scope="col">Actions</th>
+                <th scope="col">Hours</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody id="jobsBody"></tbody>
           </table>
-          <div class="queue-empty" id="jobsEmpty">Loading...</div>
+          <div class="table-empty" id="jobsEmpty" hidden>Nothing is running or queued.</div>
         </div>
-        <div class="feedback info" id="jobsFeedback"></div>
-      </section>
+        <div class="card-footer feedback info" id="jobsFeedback" role="status"></div>
+      </div>
 
-      <section class="table-card fade-up" aria-labelledby="historyHeading">
-        <div class="section-heading">
+      <div class="card">
+        <div class="card-header">
           <div>
-            <h2 class="section-title" id="historyHeading">Recent history</h2>
-            <p class="section-copy">The last 50 finished or cancelled jobs.</p>
+            <h2>Recent history</h2>
+            <p>The last 50 finished or cancelled reservations.</p>
           </div>
         </div>
         <div class="table-wrap">
-          <table class="queue-table">
+          <table>
             <thead>
               <tr>
                 <th scope="col">Job</th>
@@ -74,143 +93,156 @@
             </thead>
             <tbody id="historyBody"></tbody>
           </table>
+          <div class="table-empty" id="historyEmpty" hidden>No finished reservations yet.</div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="table-card fade-up" id="users" aria-labelledby="usersHeading">
-        <div class="section-heading">
+    <section class="stack" id="panel-users" role="tabpanel" aria-labelledby="tab-users" hidden>
+      <div class="card">
+        <div class="card-header">
           <div>
-            <h2 class="section-title" id="usersHeading">Users</h2>
-            <p class="section-copy">Deleting a user also removes their jobs and stops their running session.</p>
+            <h2>Accounts</h2>
+            <p>Deleting a user also removes their jobs and stops their running session.</p>
           </div>
         </div>
         <div class="table-wrap">
-          <table class="queue-table">
+          <table>
             <thead>
               <tr>
                 <th scope="col">Username</th>
                 <th scope="col">Email</th>
                 <th scope="col">Role</th>
-                <th scope="col">Actions</th>
+                <th scope="col">Created</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody id="usersBody"></tbody>
           </table>
         </div>
-        <div class="feedback info" id="usersFeedback"></div>
-      </section>
+        <div class="card-footer feedback info" id="usersFeedback" role="status"></div>
+      </div>
 
-      <section class="section forms-grid">
-        <article class="glass-card form-card fade-up">
-          <div class="eyebrow">New user</div>
-          <h3>Create an account</h3>
-          <form id="createUserForm">
-            <label>
-              Username
-              <input id="newUsername" type="text" autocomplete="off" autocapitalize="off" pattern="[a-z0-9][a-z0-9_.\-]{1,31}" required />
+      <div class="grid-3">
+        <form class="card" id="createUserForm">
+          <div class="card-header"><div><h2>Create an account</h2><p>Share the initial password privately.</p></div></div>
+          <div class="card-body">
+            <label class="field">
+              <span>Username</span>
+              <input id="newUsername" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" pattern="[a-z0-9][a-z0-9_.\-]{1,31}" required />
+              <span class="hint">2 to 32 characters: a-z, 0-9, dot, dash, underscore.</span>
             </label>
-            <label>
-              Initial password
+            <label class="field">
+              <span>Initial password</span>
               <input id="newUserPassword" type="password" autocomplete="new-password" minlength="8" required />
             </label>
-            <label>
-              Email (optional)
+            <label class="field">
+              <span>Email (optional)</span>
               <input id="newUserEmail" type="email" autocomplete="off" />
             </label>
-            <label class="check-row">
+            <label class="check field">
               <input id="newUserAdmin" type="checkbox" />
               <span>Administrator</span>
             </label>
-            <button id="createUserButton" type="submit">Create user</button>
-            <div class="feedback info" id="createUserFeedback"></div>
-          </form>
-        </article>
+            <div class="form-actions">
+              <button class="btn" id="createUserButton" type="submit">Create user</button>
+              <div class="feedback info" id="createUserFeedback" role="status"></div>
+            </div>
+          </div>
+        </form>
 
-        <article class="glass-card form-card fade-up delay-1">
-          <div class="eyebrow">Edit user</div>
-          <h3>Email and role</h3>
-          <form id="editUserForm">
-            <label>
-              User
+        <form class="card" id="editUserForm">
+          <div class="card-header"><div><h2>Email and role</h2><p>Update an existing account.</p></div></div>
+          <div class="card-body">
+            <label class="field">
+              <span>User</span>
               <select id="editUsername" class="user-select" required></select>
             </label>
-            <label>
-              Email (optional)
+            <label class="field">
+              <span>Email (optional)</span>
               <input id="editUserEmail" type="email" autocomplete="off" />
             </label>
-            <label class="check-row">
+            <label class="check field">
               <input id="editUserAdmin" type="checkbox" />
               <span>Administrator</span>
             </label>
-            <button id="editUserButton" class="secondary-button" type="submit">Save user</button>
-            <div class="feedback info" id="editUserFeedback"></div>
-          </form>
-        </article>
+            <div class="form-actions">
+              <button class="btn btn-secondary" id="editUserButton" type="submit">Save user</button>
+              <div class="feedback info" id="editUserFeedback" role="status"></div>
+            </div>
+          </div>
+        </form>
 
-        <article class="glass-card form-card fade-up delay-2">
-          <div class="eyebrow">Reset password</div>
-          <h3>Set a new password</h3>
-          <form id="resetPasswordForm">
-            <label>
-              User
+        <form class="card" id="resetPasswordForm">
+          <div class="card-header"><div><h2>Reset password</h2><p>The user is signed out of every session.</p></div></div>
+          <div class="card-body">
+            <label class="field">
+              <span>User</span>
               <select id="resetUsername" class="user-select" required></select>
             </label>
-            <label>
-              New password
+            <label class="field">
+              <span>New password</span>
               <input id="resetPassword" type="password" autocomplete="new-password" minlength="8" required />
             </label>
-            <div class="help-line">The user is signed out of every session.</div>
-            <button id="resetPasswordButton" class="secondary-button" type="submit">Reset password</button>
-            <div class="feedback info" id="resetPasswordFeedback"></div>
-          </form>
-        </article>
-      </section>
-
-      <section class="section forms-grid two-column">
-        <article class="glass-card form-card fade-up" id="settings">
-          <div class="eyebrow">Scheduler</div>
-          <h3>Limits</h3>
-          <form id="settingsForm">
-            <div class="field-grid">
-              <label>
-                Max run time per job (hours)
-                <input id="maxRunTime" type="number" min="0.25" step="0.25" required />
-              </label>
-              <label>
-                Active jobs per user
-                <input id="maxJobsPerUser" type="number" min="1" step="1" required />
-              </label>
-              <label>
-                Max queue length
-                <input id="maxQueueLength" type="number" min="1" step="1" required />
-              </label>
-              <label>
-                Ending notice (minutes)
-                <input id="endingNotice" type="number" min="0" step="1" required />
-              </label>
+            <div class="form-actions">
+              <button class="btn btn-secondary" id="resetPasswordButton" type="submit">Reset password</button>
+              <div class="feedback info" id="resetPasswordFeedback" role="status"></div>
             </div>
-            <div class="help-line">Limits apply to new reservations. Existing jobs keep their run time.</div>
-            <button id="settingsButton" type="submit">Save limits</button>
-            <div class="feedback info" id="settingsFeedback"></div>
-          </form>
-        </article>
+          </div>
+        </form>
+      </div>
+    </section>
 
-        <article class="glass-card form-card fade-up delay-1" id="packages">
-          <div class="eyebrow">Node packages</div>
-          <h3>Install apt packages</h3>
-          <form id="aptForm">
-            <label>
-              Packages
-              <input id="aptPackages" type="text" autocomplete="off" placeholder="htop nvtop" required />
+    <section id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <form class="card" id="settingsForm">
+        <div class="card-header"><div><h2>Scheduler limits</h2><p>Limits apply to new reservations. Existing jobs keep their run time.</p></div></div>
+        <div class="card-body">
+          <div class="fields">
+            <label class="field">
+              <span>Max hours per job</span>
+              <input id="maxRunTime" type="number" min="0.25" step="0.25" required />
             </label>
-            <div class="help-line">Separate package names with spaces or commas. Runs apt-get install as root in the container.</div>
-            <button id="aptButton" class="secondary-button" type="submit">Install packages</button>
-            <div class="feedback info" id="aptFeedback"></div>
-          </form>
-        </article>
-      </section>
-    </div>
-  </div>
+            <label class="field">
+              <span>Active jobs per user</span>
+              <input id="maxJobsPerUser" type="number" min="1" step="1" required />
+            </label>
+            <label class="field">
+              <span>Max queue length</span>
+              <input id="maxQueueLength" type="number" min="1" step="1" required />
+            </label>
+            <label class="field">
+              <span>Ending notice (minutes)</span>
+              <input id="endingNotice" type="number" min="0" step="1" required />
+              <span class="hint">How long before the end the "about to end" email is sent.</span>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button class="btn" id="settingsButton" type="submit">Save limits</button>
+            <div class="feedback info" id="settingsFeedback" role="status"></div>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section id="panel-packages" role="tabpanel" aria-labelledby="tab-packages" hidden>
+      <form class="card" id="aptForm">
+        <div class="card-header"><div><h2>Install apt packages</h2><p>Runs apt-get update and apt-get install as root inside the container. Python packages belong in the host environment.</p></div></div>
+        <div class="card-body">
+          <label class="field">
+            <span>Packages</span>
+            <input id="aptPackages" type="text" autocomplete="off" spellcheck="false" placeholder="htop nvtop" required />
+            <span class="hint">Separate names with spaces or commas.</span>
+          </label>
+          <div class="form-actions">
+            <button class="btn btn-secondary" id="aptButton" type="submit">Install packages</button>
+            <div class="feedback info" id="aptFeedback" role="status"></div>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <footer class="footer">Erbium by amplimit</footer>
+  </main>
   <script src="/assets/common.js"></script>
   <script src="/assets/admin.js"></script>
 </body>

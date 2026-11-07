@@ -6,7 +6,8 @@ from logging import getLogger
 from operator import itemgetter
 from os import environ
 from pathlib import Path
-from re import fullmatch
+from hashlib import sha256
+from re import Match, fullmatch, sub
 from ipaddress import ip_address
 from struct import error as StructError, unpack
 from subprocess import CalledProcessError, TimeoutExpired, run
@@ -32,7 +33,7 @@ SESSION_SECONDS: int = 7 * 24 * 3600
 SAFE_METHODS: frozenset[str] = frozenset({"GET", "HEAD", "OPTIONS"})
 PAGE_POLICY: str = (
     "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; "
-    "img-src 'self' data: https://raw.githubusercontent.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+    "img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 )
 KEY_TYPES: frozenset[str] = frozenset({
     "ssh-ed25519", "ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521",
@@ -194,7 +195,7 @@ def _clear_session_cookie(response: Response) -> None:
 
 
 def _page(runtime: Runtime, name: str) -> HTMLResponse:
-    return HTMLResponse(runtime.pages[name], headers={"Content-Security-Policy": PAGE_POLICY})
+    return HTMLResponse(runtime.pages[name], headers={"Content-Security-Policy": PAGE_POLICY, "Cache-Control": "no-cache"})
 
 
 def _job_view(job: Job, *, estimated_start: float | None = None) -> dict[str, Any]:
@@ -451,10 +452,19 @@ def _admin_routes() -> APIRouter:
     return router
 
 
+def _asset_version(match: Match[str]) -> str:
+    digest = sha256((ASSETS_DIR / match.group(1)).read_bytes()).hexdigest()[:12]
+    return f"/assets/{match.group(1)}?v={digest}\""
+
+
+def _load_page(name: str) -> str:
+    return sub(r'/assets/([\w.-]+)"', _asset_version, (ASSETS_DIR / f"{name}.html").read_text(encoding="utf-8"))
+
+
 def create_app(node: Node) -> FastAPI:
     app = FastAPI(title="Erbium Server", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.runtime = Runtime(node, LoginThrottle(), BoundedSemaphore(2), {
-        name: (ASSETS_DIR / f"{name}.html").read_text(encoding="utf-8") for name in ("login", "dash", "admin")
+        name: _load_page(name) for name in ("login", "dash", "admin")
     })
 
     @app.middleware("http")
