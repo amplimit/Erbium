@@ -45,7 +45,7 @@ write_motd() {
   cat > /etc/motd <<'MOTD'
 Welcome to Erbium!
 
-This is part of Project Neura's Internal Computing Platform. Authorized access only.
+This is part of amplimit's Internal Computing Platform. Authorized access only.
 
 To report issues, please join #erbium on Slack.
 MOTD

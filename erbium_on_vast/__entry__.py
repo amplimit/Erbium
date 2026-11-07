@@ -5,7 +5,7 @@ from erbium_on_vast.functional import initialize, upload_workspace, download_wor
 
 def __entry__() -> None:
     parser = ArgumentParser(prog="Erbium on Vast", description="Erbium Compute Platform on Vast.ai",
-                            epilog="GitHub: https://github.com/ProjectNeura/Erbium")
+                            epilog="GitHub: https://github.com/amplimit/Erbium")
     subparsers = parser.add_subparsers(dest="action", required=True)
     init_parser = subparsers.add_parser("init")
     init_parser.add_argument("--node_id", required=True, help="The ID of this node")

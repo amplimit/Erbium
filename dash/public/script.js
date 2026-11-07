@@ -93,9 +93,9 @@ function buildNodeLinks(nodeName) {
   const slug = generateSlug(nodeName);
 
   return [
-    { label: 'SSH Tunnel', href: `https://${slug}.projectneura.org` },
-    { label: 'JupyterLab', href: `https://jupyter-${slug}.projectneura.org` },
-    { label: 'Node Dashboard', href: `https://node-${slug}.projectneura.org/dash` },
+    { label: 'SSH Tunnel', href: `https://${slug}.amplimit.com` },
+    { label: 'JupyterLab', href: `https://jupyter-${slug}.amplimit.com` },
+    { label: 'Node Dashboard', href: `https://node-${slug}.amplimit.com/dash` },
   ];
 }
 
