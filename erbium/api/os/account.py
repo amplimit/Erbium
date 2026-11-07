@@ -6,6 +6,7 @@ from re import fullmatch
 from secrets import choice
 from string import ascii_letters, digits
 from subprocess import DEVNULL, STDOUT, Popen, TimeoutExpired, run
+from sys import executable
 from time import monotonic, sleep
 from typing import Sequence
 
@@ -45,6 +46,7 @@ class LinuxAccount(object):
         "true"
     )
     SYSTEM_PATH: str = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    KILL_ALL_SCRIPT: str = "import os, signal; os.kill(-1, signal.SIGKILL)"
 
     def __init__(self, username: str = "access", *, authorized_keys_dir: str | PathLike[str] = "/etc/erbium/authorized_keys",
                  jupyter_executable: str = "/workspace/venv/bin/jupyter", jupyter_root: str = "/workspace",
@@ -126,8 +128,8 @@ class LinuxAccount(object):
         identity = lookup_identity(self.username)
         deadline = monotonic() + timeout
         while True:
-            run(("/bin/kill", "-KILL", "-1"), stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL, env={},
-                user=identity.uid, group=identity.gid, extra_groups=[], check=False)
+            run((executable, "-I", "-S", "-c", self.KILL_ALL_SCRIPT), stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL,
+                env={}, user=identity.uid, group=identity.gid, extra_groups=[], check=False)
             if not self._remaining():
                 return
             if monotonic() >= deadline:

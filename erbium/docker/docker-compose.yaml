@@ -52,6 +52,7 @@ services:
       # ERBIUM_BACKUP_SECTION_END
       # ERBIUM_HOST_PACKAGES_SECTION_START
       ERBIUM_HOST_PACKAGES: ERBIUM_HOST_SITE_PACKAGES
+      ERBIUM_HOST_EXTRA_PACKAGES: ERBIUM_HOST_EXTRA_PACKAGES
       # ERBIUM_HOST_PACKAGES_SECTION_END
     command: >
       bash -lc '
@@ -96,7 +97,11 @@ services:
                   rm -rf /opt/erbium/kernel
                   /root/.local/bin/uv pip install --python /usr/bin/python3 --target /opt/erbium/kernel ipykernel git+https://github.com/amplimit/Erbium
                 fi
-                echo /opt/erbium/kernel > /usr/lib/python3/dist-packages/erbium-kernel.pth
+                : > /usr/lib/python3/dist-packages/erbium-kernel.pth
+                for EXTRA in $$(echo "$${ERBIUM_HOST_EXTRA_PACKAGES:-}" | tr ":" " "); do
+                  echo "$$EXTRA" >> /usr/lib/python3/dist-packages/erbium-kernel.pth
+                done
+                echo /opt/erbium/kernel >> /usr/lib/python3/dist-packages/erbium-kernel.pth
                 install -d -m 755 /opt/erbium/jupyter/share/jupyter/kernels/python3
                 printf "%s\n" "{\"argv\": [\"/usr/bin/python3\", \"-m\", \"ipykernel_launcher\", \"-f\", \"{connection_file}\"], \"display_name\": \"Python 3\", \"language\": \"python\"}" > /opt/erbium/jupyter/share/jupyter/kernels/python3/kernel.json
                 rm -rf /usr/local/share/jupyter/kernels/python3
