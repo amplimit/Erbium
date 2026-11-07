@@ -7,6 +7,7 @@ services:
     networks: [labnet]
     init: true
     volumes:
+      - erbium_home:/home/access
       - erbium_app:/workspace/app
       - erbium_venv:/workspace/venv
       - erbium_pvenvs:/workspace/pvenvs
@@ -75,6 +76,7 @@ services:
               usermod -aG video,render access || true
               chown access:access /home/access /workspace/app /workspace/output /workspace/venv /workspace/pvenvs
               chown -R access:access /home/access/.codex /home/access/.claude
+              su access -s /bin/sh -c "cp -rn /etc/skel/. /home/access/"
               chown root:root /var/lib/erbium
               chmod 700 /var/lib/erbium
               install -d -o root -g root -m 755 /etc/erbium /etc/erbium/authorized_keys
@@ -149,6 +151,7 @@ networks:
   labnet:
     external: true
 volumes:
+  erbium_home:
   erbium_app:
   erbium_venv:
   erbium_pvenvs:

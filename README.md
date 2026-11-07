@@ -124,12 +124,23 @@ python -m erbium docker run ./docker-compose.yaml ${SERVICE_NAME}
 ```
 
 The container restarts automatically after crashes and host reboots (`restart: unless-stopped`). Every start reruns the
-setup script, so it takes a few minutes before the dashboard is reachable again. Running jobs survive restarts: the
-scheduler grants the session again once the server is back, but open SSH and Jupyter connections are dropped.
+setup script, so it takes a few minutes before the dashboard is reachable again. Only the reservation survives a
+restart: the running job is granted again with the same credentials, but every process in the container is killed and
+the downtime counts toward the reserved time, so long runs should checkpoint to `/workspace/output`.
 
-The Compose project is named `erbium-${SERVICE_NAME}`, and its volumes hold the accounts, the queue, and the shared home
-directories. Stop the container with `docker compose -f ./docker-compose.yaml stop`, and never pass `-v` to
-`docker compose down`, which deletes these volumes.
+The Compose project is named `erbium-${SERVICE_NAME}`. Its volumes keep `/home/access` (including `pip install --user`
+additions), `/workspace/app`, `/workspace/venv`, `/workspace/pvenvs`, and `/var/lib/erbium` (accounts, the queue, and
+settings) when the container is recreated; everything else in the container is rebuilt from the image. Stop the
+container with `docker compose -f ./docker-compose.yaml stop`, and never pass `-v` to `docker compose down`, which
+deletes these volumes.
+
+Deployments created before the project name was fixed use volumes prefixed with the old project name (the name of the
+directory that held the Compose file, for example `erbium_`). Before starting such a node with a new Compose file,
+remove the old container with `docker rm -f ${SERVICE_NAME}` and copy every old volume into its new name, for example:
+
+```shell
+docker run --rm -v erbium_erbium_state_${SERVICE_NAME}:/from -v erbium-${SERVICE_NAME}_erbium_state_${SERVICE_NAME}:/to ubuntu:26.04 cp -a /from/. /to/
+```
 
 ### Configure Email Notifications (Optional)
 
