@@ -6,8 +6,8 @@
 ![poster](assets/poster.png)
 
 Erbium is Project Neura's internal compute platform. It is designed to suit mid-scale organizational needs and 100%
-open-source to avoid concerns about backdoors. We do not aim to provide a user system as it may get too complex and
-needs greatly vary across organizations. Our main goal is to build a general and scalable solution for automatic job
+open-source to avoid concerns about backdoors. It includes a minimal account system for small trusted teams:
+administrators create accounts, and members sign in to queue for the node. Our main goal is to build a general and scalable solution for automatic job
 scheduling, orchestration, and reinforced file backup. We bring these together using C++ integrated with Python running
 in Docker containers, and services exposed via APIs. With the distributed nodes organized using Cloudflare, we are able
 to manage dozens to hundreds of nodes without hiring any IT ops. Each host machine simply needs to install Erbium and
@@ -21,6 +21,8 @@ simply fork this repository and replace the driver-related code with your own.
 - SSH Tunneling
 - JupyterLab
 - Job Scheduling
+- Accounts, Admin Console, and Per-Session SSH Credentials
+- Email Notifications
 - File History Backup
 
 Some facts:
@@ -29,6 +31,9 @@ Some facts:
 - JupyterLab can only explore files in "/workspace", but its terminal can access anything
 - Only the output folder "/workspace/output" is backed up every 12 hours
 - Jobs that reach their requested duration will be killed
+- All members share the "access" Linux user, so files in its home and "/workspace" persist between reservations and are
+  visible to the next member; remove personal tokens before your reservation ends
+- Codex, Claude Code, and GitHub CLI are signed out automatically when a reservation ends
 
 ## Installation
 
