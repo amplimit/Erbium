@@ -52,7 +52,7 @@ def _user_command(args: Namespace) -> None:
 
 def __entry__() -> None:
     parser = ArgumentParser(prog="Erbium", description="Erbium Compute Platform",
-                            epilog="GitHub: https://github.com/ProjectNeura/Erbium")
+                            epilog="GitHub: https://github.com/amplimit/Erbium")
     subparsers = parser.add_subparsers(dest="system", required=True)
     docker_parser = subparsers.add_parser("docker")
     docker_sub = docker_parser.add_subparsers(dest="docker_cmd", required=True)

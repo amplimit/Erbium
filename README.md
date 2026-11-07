@@ -1,11 +1,12 @@
 # Erbium
 
-![GitHub Release](https://img.shields.io/github/v/release/ProjectNeura/Erbium)
-![GitHub Stars](https://img.shields.io/github/stars/ProjectNeura/Erbium)
+![GitHub Release](https://img.shields.io/github/v/release/amplimit/Erbium)
+![GitHub Stars](https://img.shields.io/github/stars/amplimit/Erbium)
 
 ![poster](assets/poster.png)
 
-Erbium is Project Neura's internal compute platform. It is designed to suit mid-scale organizational needs and 100%
+Erbium is amplimit's internal compute platform, forked from
+[ProjectNeura/Erbium](https://github.com/ProjectNeura/Erbium) under the Apache License 2.0. It is designed to suit mid-scale organizational needs and 100%
 open-source to avoid concerns about backdoors. It includes a minimal account system for small trusted teams:
 administrators create accounts, and members sign in to queue for the node. Our main goal is to build a general and scalable solution for automatic job
 scheduling, orchestration, and reinforced file backup. We bring these together using C++ integrated with Python running
@@ -45,10 +46,10 @@ pip install git+https://github.com/amplimit/Erbium
 
 Each node serves three hostnames through Cloudflare Tunnel. For a node named "main":
 
-- https://node-main-erbium.projectneura.org is the dashboard. Sign in with the account an administrator created for
+- https://node-main-erbium.amplimit.com is the dashboard. Sign in with the account an administrator created for
   you, join the queue, and manage your settings.
-- main-erbium.projectneura.org is SSH. The username is always "access".
-- https://jupyter-main-erbium.projectneura.org is JupyterLab.
+- main-erbium.amplimit.com is SSH. The username is always "access".
+- https://jupyter-main-erbium.amplimit.com is JupyterLab.
 
 When your reservation starts, the dashboard shows a one-time SSH password and a JupyterLab link for that session, and
 installs the SSH public keys saved in your settings. When the reservation ends, all processes of the session are killed
@@ -125,7 +126,7 @@ Create an env file outside the repository, for example `erbium.env`:
 ```shell
 RESEND_API_KEY=re_xxxxxxxx
 ERBIUM_MAIL_FROM=Erbium <erbium@your-verified-domain.org>
-ERBIUM_PUBLIC_URL=https://node-main-erbium.projectneura.org
+ERBIUM_PUBLIC_URL=https://node-main-erbium.amplimit.com
 ```
 
 Pass it with `--env_file ./erbium.env` when running `docker create`. Without it, notifications are disabled.

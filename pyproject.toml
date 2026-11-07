@@ -5,11 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "erbium"
 version = "0.3.4"
-description = "Project Neura's Internal Computing Platform"
+description = "amplimit's Internal Computing Platform, forked from Project Neura's Erbium"
 license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
+    { name = "amplimit" },
     { name = "Project Neura", email = "central@projectneura.org" }
 ]
 dependencies = ["fastapi", "uvicorn", "pydantic", "nvidia-ml-py", "psutil", "matplotlib", "huggingface-hub>=1.5.0"]
@@ -24,9 +25,9 @@ only-include = ["erbium", "erbium_on_vast"]
 packages = ["erbium", "erbium_on_vast"]
 
 [project.urls]
-Homepage = "https://github.com/ProjectNeura/Erbium"
-Documentation = "https://github.com/ProjectNeura/Erbium"
-Repository = "https://github.com/ProjectNeura/Erbium"
+Homepage = "https://github.com/amplimit/Erbium"
+Documentation = "https://github.com/amplimit/Erbium"
+Repository = "https://github.com/amplimit/Erbium"
 
 [project.scripts]
 erbium = "erbium:__entry__"
