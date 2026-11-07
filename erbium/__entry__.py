@@ -5,6 +5,7 @@ from sys import exit as sys_exit, stdin
 
 from erbium.api import create_docker_compose, command_to_start_docker_compose, run_command, command_to_initialize_docker
 from erbium.api.docker.docker_compose import __DEFAULT_BASE_IMAGE__, __DEFAULT_SHARED_NETWORK__
+from erbium.api.docker.host_python import write_console_scripts
 from erbium.server.auth import EMAIL_PATTERN, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, USERNAME_PATTERN, \
     hash_password
 from erbium.server.run import DEFAULT_STATE_DIR, open_store, run_server
@@ -65,8 +66,14 @@ def __entry__() -> None:
     docker_create.add_argument("--no-backup", action="store_true", help="Disable automatic Borg backups for the output directory")
     docker_create.add_argument("--env_file", default=None,
                                help="File with server secrets such as RESEND_API_KEY, passed to the container")
+    docker_create.add_argument("--host_site_packages", default=None,
+                               help="Host site-packages directory to mount read-only at the same path, so the container "
+                                    "uses the host Python environment instead of a virtual environment")
     docker_create.add_argument("paths", nargs="+",
                                help="INPUT_DIR OUTPUT_DIR BACKUP_DIR SAVE_AS, or INPUT_DIR OUTPUT_DIR SAVE_AS with --no-backup")
+    docker_scripts = docker_sub.add_parser("scripts", help="Write console scripts for the packages in a site-packages directory")
+    docker_scripts.add_argument("site_packages")
+    docker_scripts.add_argument("target")
     docker_run = docker_sub.add_parser("run")
     docker_run.add_argument("profile_path")
     docker_run.add_argument("service_name")
@@ -77,6 +84,7 @@ def __entry__() -> None:
     server_run.add_argument("-p", "--port", type=int, default=8000)
     server_run.add_argument("--host", default="0.0.0.0")
     server_run.add_argument("--state_dir", default=DEFAULT_STATE_DIR)
+    server_run.add_argument("--jupyter_executable", default="/workspace/venv/bin/jupyter")
     server_run.add_argument("--max_gpu_utilization", type=float, default=15, help="Percent")
     server_run.add_argument("--max_gpu_memory_utilization", type=float, default=15, help="Percent")
     server_run.add_argument("--log_level", default="warning", choices=["critical", "error", "warning", "info", "debug", "trace"])
@@ -119,8 +127,11 @@ def __entry__() -> None:
                         f.write(create_docker_compose(
                             args.service_name, base_image=args.base_image, hostname=args.service_name,
                             container_name=args.service_name, input_dir=input_dir, output_dir=output_dir,
-                            backup_dir=backup_dir, gpus=args.gpus, env_file=args.env_file
+                            backup_dir=backup_dir, gpus=args.gpus, env_file=args.env_file,
+                            host_site_packages=args.host_site_packages
                         ))
+                case "scripts":
+                    print(f"Wrote {write_console_scripts(args.site_packages, args.target)} console scripts to {args.target}")
                 case "run":
                     run_command(command_to_start_docker_compose(
                         args.profile_path, args.service_name, force_build=args.force_build
@@ -128,7 +139,7 @@ def __entry__() -> None:
         case "server":
             match args.server_cmd:
                 case "run":
-                    run_server(args.port, host=args.host, state_dir=args.state_dir,
+                    run_server(args.port, host=args.host, state_dir=args.state_dir, jupyter_executable=args.jupyter_executable,
                                max_gpu_utilization=args.max_gpu_utilization,
                                max_gpu_memory_utilization=args.max_gpu_memory_utilization,
                                log_level=args.log_level, access_log=args.access_log)

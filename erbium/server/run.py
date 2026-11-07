@@ -42,6 +42,7 @@ def _single_instance(state_dir: Path) -> IO[str]:
 
 
 def run_server(port: int, *, host: str = "0.0.0.0", state_dir: str | PathLike[str] = DEFAULT_STATE_DIR,
+               jupyter_executable: str = "/workspace/venv/bin/jupyter",
                max_gpu_utilization: float = 15, max_gpu_memory_utilization: float = 15,
                log_level: Literal["critical", "error", "warning", "info", "debug", "trace"] = "warning",
                access_log: bool = False) -> None:
@@ -50,7 +51,7 @@ def run_server(port: int, *, host: str = "0.0.0.0", state_dir: str | PathLike[st
     lock = _single_instance(Path(state_dir))
     notifications = Notifications(store, Dispatcher(_notifier()), public_url=environ.get("ERBIUM_PUBLIC_URL"),
                                   node_name=environ.get("ERBIUM_NODE_NAME", gethostname()))
-    node = Node(store, LinuxAccount(), max_gpu_utilization=max_gpu_utilization,
+    node = Node(store, LinuxAccount(jupyter_executable=jupyter_executable), max_gpu_utilization=max_gpu_utilization,
                 max_gpu_memory_utilization=max_gpu_memory_utilization, on_event=notifications.handle)
     node.start()
     try:
