@@ -32,7 +32,7 @@ SESSION_SECONDS: int = 7 * 24 * 3600
 SAFE_METHODS: frozenset[str] = frozenset({"GET", "HEAD", "OPTIONS"})
 PAGE_POLICY: str = (
     "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; "
-    "img-src 'self' data: https://raw.githubusercontent.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+    "img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 )
 KEY_TYPES: frozenset[str] = frozenset({
     "ssh-ed25519", "ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521",

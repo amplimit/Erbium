@@ -3,32 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Erbium Sign In</title>
+  <title>Sign in · Erbium</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
   <link rel="stylesheet" href="/assets/style.css" />
 </head>
 <body>
-  <main class="auth-shell">
-    <article class="glass-card form-card auth-card fade-up">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true"></div>
-        <div class="brand-copy">
-          <strong>Erbium</strong>
-          <span>Compute platform</span>
-        </div>
+  <main class="auth">
+    <section class="card auth-card" aria-labelledby="authTitle">
+      <div class="auth-brand">
+        <img src="/assets/logo.svg" alt="amplimit" />
+        <h1 id="authTitle">Sign in to Erbium</h1>
+        <p>amplimit compute platform</p>
       </div>
-      <form id="loginForm">
-        <label>
-          Username
+      <form id="loginForm" novalidate>
+        <label class="field">
+          <span>Username</span>
           <input id="loginUsername" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" required />
         </label>
-        <label>
-          Password
+        <label class="field">
+          <span>Password</span>
           <input id="loginPassword" type="password" autocomplete="current-password" required />
         </label>
-        <button id="loginButton" type="submit">Sign in</button>
-        <div class="feedback info" id="loginFeedback">Accounts are created by an administrator.</div>
+        <button id="loginButton" class="btn" type="submit">Sign in</button>
+        <div class="feedback info" id="loginFeedback" role="status" aria-live="polite"></div>
       </form>
-    </article>
+      <p class="auth-footer">Accounts are created by an administrator.</p>
+    </section>
   </main>
   <script src="/assets/common.js"></script>
   <script src="/assets/login.js"></script>
