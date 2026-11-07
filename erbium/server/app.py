@@ -18,6 +18,7 @@ from typing import Annotated, Any, Awaitable, Callable, Literal
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from psutil import cpu_percent, virtual_memory
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 from erbium.api import Job, Node, NotificationKind, QuotaError, Settings, User, get_all_gpu_info
@@ -328,7 +329,19 @@ def _user_routes() -> APIRouter:
     @router.get("/status")
     def status(request: Request) -> dict[str, Any]:
         node = _runtime(request).node
-        return {**_queue_view(node), "gpus": _gpus(node)}
+        return _queue_view(node)
+
+    @router.get("/telemetry")
+    def telemetry(request: Request) -> dict[str, Any]:
+        memory = virtual_memory()
+        return {
+            "gpus": _gpus(_runtime(request).node),
+            "host": {
+                "cpu_percent": cpu_percent(interval=None), "memory_percent": memory.percent,
+                "memory_used_gb": (memory.total - memory.available) / 1073741824,
+                "memory_total_gb": memory.total / 1073741824
+            }
+        }
 
     @router.post("/jobs")
     def join(job: JobModel, principal: CurrentUser, request: Request) -> dict[str, Any]:
@@ -466,6 +479,7 @@ def create_app(node: Node) -> FastAPI:
     app.state.runtime = Runtime(node, LoginThrottle(), BoundedSemaphore(2), {
         name: _load_page(name) for name in ("login", "dash", "admin")
     })
+    cpu_percent(interval=None)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:

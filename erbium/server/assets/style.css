@@ -1066,6 +1066,60 @@ td.muted {
   background: linear-gradient(90deg, #e08a00, var(--danger));
 }
 
+.usage-host {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.usage-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--success);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.live::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.live.paused {
+  color: var(--text-subtle);
+}
+
+.live.paused::before {
+  animation: none;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.hot {
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .gpu-facts {
   display: flex;
   gap: 16px;
@@ -1254,5 +1308,10 @@ td.muted {
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .live::before {
+    animation: none;
   }
 }

@@ -59,7 +59,7 @@
         <div class="stat-hint" id="statQueueHint">&nbsp;</div>
       </div>
       <div class="card stat">
-        <div class="stat-label">GPU memory in use</div>
+        <div class="stat-label">GPU memory</div>
         <div class="stat-value" id="statMemory">--</div>
         <div class="stat-hint" id="statMemoryHint">&nbsp;</div>
       </div>
@@ -111,14 +111,18 @@
             </form>
           </section>
 
-          <section class="card" aria-labelledby="gpuHeading">
+          <section class="card" aria-labelledby="usageHeading">
             <div class="card-header">
               <div>
-                <h2 id="gpuHeading">GPUs</h2>
-                <p>Memory includes processes outside Erbium.</p>
+                <h2 id="usageHeading">Live usage</h2>
+                <p>Includes processes outside Erbium.</p>
               </div>
+              <span class="live" id="liveIndicator">Live</span>
             </div>
-            <div class="card-body" id="gpuList"></div>
+            <div class="card-body">
+              <div id="gpuList"></div>
+              <div class="usage-host" id="hostUsage"></div>
+            </div>
           </section>
         </div>
       </div>
