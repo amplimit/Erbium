@@ -17,7 +17,8 @@
   const $ = (id) => document.getElementById(id);
   const esc = erbium.escapeHtml;
   const icon = erbium.icon;
-  const state = { me: null, status: null, session: null, revealed: false, os: detectOs() };
+  const state = { me: null, status: null, session: null, telemetry: null, revealed: false, os: detectOs() };
+  const TELEMETRY_INTERVAL_MS = 1000;
   const host = erbium.nodeHost() || "<node-host>";
   const jupyterHost = erbium.nodeHost() ? `jupyter-${erbium.nodeHost()}` : null;
 
@@ -199,16 +200,6 @@
     $("statQueue").textContent = String(status.queue.length);
     const mineQueued = status.queue.filter((job) => job.username === state.me.username).length;
     $("statQueueHint").textContent = mineQueued ? `${mineQueued} of them yours` : "waiting reservations";
-    const gpus = status.gpus;
-    if (gpus.length) {
-      const total = gpus.reduce((sum, gpu) => sum + (Number(gpu.total_memory_gb) || 0), 0);
-      const used = gpus.reduce((sum, gpu) => sum + (Number(gpu.total_memory_gb) || 0) * (Number(gpu.memory_utilization_percent) || 0) / 100, 0);
-      $("statMemory").textContent = `${used.toFixed(1)} / ${total.toFixed(0)} GB`;
-      $("statMemoryHint").textContent = `${gpus.length} GPU${gpus.length === 1 ? "" : "s"}`;
-    } else {
-      $("statMemory").textContent = "--";
-      $("statMemoryHint").textContent = "no telemetry";
-    }
   }
 
   function renderQueue() {
@@ -240,34 +231,85 @@
     `;
   }
 
-  function renderGpus() {
-    const gpus = state.status.gpus;
-    if (!gpus.length) {
-      $("gpuList").innerHTML = '<p class="hint">No GPU telemetry is available.</p>';
+  function meter(label, percent, detail) {
+    const value = Number(percent) || 0;
+    return `
+      <div class="meter">
+        <div class="meter-label"><span>${label}</span><span>${detail}</span></div>
+        <div class="meter-track"><span class="meter-fill${value >= 80 ? " high" : ""}" data-width="${value}"></span></div>
+      </div>
+    `;
+  }
+
+  function memoryOf(gpu) {
+    const total = Number(gpu.total_memory_gb) || 0;
+    const percent = Number(gpu.memory_utilization_percent) || 0;
+    return { total, percent, used: (total * percent) / 100 };
+  }
+
+  function renderTelemetry() {
+    const telemetry = state.telemetry;
+    if (!telemetry) {
       return;
     }
-    $("gpuList").innerHTML = gpus.map((gpu) => {
-      const total = Number(gpu.total_memory_gb) || 0;
-      const percent = Number(gpu.memory_utilization_percent) || 0;
-      const used = (total * percent) / 100;
-      return `
-        <div class="gpu">
-          <div class="gpu-head">
-            <span class="gpu-name">${esc(gpu.name)}</span>
-            <span class="gpu-id">GPU ${gpu.device_id}</span>
+    const gpus = telemetry.gpus;
+    if (gpus.length) {
+      const total = gpus.reduce((sum, gpu) => sum + memoryOf(gpu).total, 0);
+      const used = gpus.reduce((sum, gpu) => sum + memoryOf(gpu).used, 0);
+      $("statMemory").textContent = total ? `${Math.round((100 * used) / total)}%` : "--";
+      $("statMemoryHint").textContent = `${used.toFixed(1)} of ${total.toFixed(0)} GB in use`;
+      $("gpuList").innerHTML = gpus.map((gpu) => {
+        const memory = memoryOf(gpu);
+        const hot = Number(gpu.temperature_c) >= 80;
+        return `
+          <div class="gpu">
+            <div class="gpu-head">
+              <span class="gpu-name">${esc(gpu.name)}</span>
+              <span class="gpu-id">GPU ${gpu.device_id}</span>
+            </div>
+            ${meter("Memory", memory.percent, `${Math.round(memory.percent)}% · ${memory.used.toFixed(1)} / ${memory.total.toFixed(0)} GB`)}
+            ${meter("Compute", gpu.utilization_percent, erbium.formatNumber(gpu.utilization_percent, "%"))}
+            <div class="gpu-facts">
+              <span class="${hot ? "hot" : ""}">Temperature ${erbium.formatNumber(gpu.temperature_c, " °C")}</span>
+              <span>Power ${erbium.formatNumber(gpu.power_draw_w, " W")}</span>
+            </div>
           </div>
-          <div class="meter">
-            <div class="meter-label"><span>Memory</span><span>${used.toFixed(1)} / ${total.toFixed(0)} GB</span></div>
-            <div class="meter-track"><span class="meter-fill${percent >= 80 ? " high" : ""}" data-width="${percent}"></span></div>
-          </div>
-          <div class="gpu-facts">
-            <span>Compute ${erbium.formatNumber(gpu.utilization_percent, "%")}</span>
-            <span>Power ${erbium.formatNumber(gpu.power_draw_w, " W")}</span>
-          </div>
-        </div>
-      `;
-    }).join("");
+        `;
+      }).join("");
+    } else {
+      $("statMemory").textContent = "--";
+      $("statMemoryHint").textContent = "no GPU telemetry";
+      $("gpuList").innerHTML = '<p class="hint">No GPU telemetry is available.</p>';
+    }
+    const host = telemetry.host;
+    $("hostUsage").innerHTML = `
+      <div class="usage-title"><span>Host</span></div>
+      ${meter("CPU", host.cpu_percent, erbium.formatNumber(host.cpu_percent, "%"))}
+      ${meter("Memory", host.memory_percent, `${Math.round(host.memory_percent)}% · ${host.memory_used_gb.toFixed(1)} / ${host.memory_total_gb.toFixed(0)} GB`)}
+    `;
     erbium.applyWidths($("gpuList"));
+    erbium.applyWidths($("hostUsage"));
+  }
+
+  let telemetryBusy = false;
+
+  async function pollTelemetry() {
+    if (document.hidden || telemetryBusy) {
+      return;
+    }
+    telemetryBusy = true;
+    const indicator = $("liveIndicator");
+    try {
+      state.telemetry = await erbium.api("GET", "/api/telemetry");
+      renderTelemetry();
+      indicator.textContent = "Live";
+      indicator.classList.remove("paused");
+    } catch (error) {
+      indicator.textContent = "Reconnecting";
+      indicator.classList.add("paused");
+    } finally {
+      telemetryBusy = false;
+    }
   }
 
   async function refresh() {
@@ -289,7 +331,7 @@
     $("liveBanner").hidden = !failed;
     const renders = [renderSession];
     if (state.status) {
-      renders.push(renderStats, renderQueue, renderGpus);
+      renders.push(renderStats, renderQueue);
     }
     for (const render of renders) {
       try {
@@ -388,5 +430,15 @@
     await refresh();
     window.setInterval(refresh, 15000);
     window.setInterval(tick, 1000);
+    pollTelemetry();
+    window.setInterval(pollTelemetry, TELEMETRY_INTERVAL_MS);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        $("liveIndicator").textContent = "Paused";
+        $("liveIndicator").classList.add("paused");
+      } else {
+        pollTelemetry();
+      }
+    });
   })();
 })();

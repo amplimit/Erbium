@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from pynvml import nvmlInit, nvmlDeviceGetCount, nvmlDeviceGetHandleByIndex, nvmlDeviceGetName, \
     nvmlDeviceGetClockInfo, NVML_CLOCK_GRAPHICS, NVML_CLOCK_MEM, nvmlDeviceGetMemoryInfo, nvmlDeviceGetFanSpeed, \
-    nvmlDeviceGetUtilizationRates, nvmlDeviceGetPowerUsage, struct_c_nvmlDevice_t
+    nvmlDeviceGetUtilizationRates, nvmlDeviceGetPowerUsage, nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU,     struct_c_nvmlDevice_t
 
 
 @dataclass
@@ -15,6 +15,7 @@ class GPUInfo(object):
     clock_speed_mhz: float | None
     memory_clock_speed_mhz: float | None
     total_memory_gb: float
+    temperature_c: float | None
 
 
 def _clock_speed(handle: struct_c_nvmlDevice_t) -> float | None:
@@ -45,6 +46,13 @@ def _power_draw_w(handle: struct_c_nvmlDevice_t) -> float | None:
         return None
 
 
+def _temperature_c(handle: struct_c_nvmlDevice_t) -> float | None:
+    try:
+        return nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
+    except Exception:
+        return None
+
+
 def get_all_gpu_info() -> dict[int, GPUInfo]:
     r = {}
     nvmlInit()
@@ -54,6 +62,7 @@ def get_all_gpu_info() -> dict[int, GPUInfo]:
         mem_info = nvmlDeviceGetMemoryInfo(handle)
         r[i] = GPUInfo(
             i, nvmlDeviceGetName(handle), _utilization_percent(handle), 100 * mem_info.used / mem_info.total,
-            _power_draw_w(handle), _clock_speed(handle), _mem_clock_speed(handle), mem_info.total / 1073741824
+            _power_draw_w(handle), _clock_speed(handle), _mem_clock_speed(handle), mem_info.total / 1073741824,
+            _temperature_c(handle)
         )
     return r
