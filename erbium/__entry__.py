@@ -65,6 +65,11 @@ def __entry__() -> None:
     docker_create.add_argument("--no-backup", action="store_true", help="Disable automatic Borg backups for the output directory")
     docker_create.add_argument("--env_file", default=None,
                                help="File with server secrets such as RESEND_API_KEY, passed to the container")
+    docker_create.add_argument("--host_site_packages", default=None,
+                               help="Host site-packages directory to mount read-only at the same path, so the container "
+                                    "uses the host Python environment instead of a virtual environment")
+    docker_create.add_argument("--host_scripts", default=None,
+                               help="Host directory with the console scripts of those packages, such as /usr/local/bin")
     docker_create.add_argument("paths", nargs="+",
                                help="INPUT_DIR OUTPUT_DIR BACKUP_DIR SAVE_AS, or INPUT_DIR OUTPUT_DIR SAVE_AS with --no-backup")
     docker_run = docker_sub.add_parser("run")
@@ -77,6 +82,7 @@ def __entry__() -> None:
     server_run.add_argument("-p", "--port", type=int, default=8000)
     server_run.add_argument("--host", default="0.0.0.0")
     server_run.add_argument("--state_dir", default=DEFAULT_STATE_DIR)
+    server_run.add_argument("--jupyter_executable", default="/workspace/venv/bin/jupyter")
     server_run.add_argument("--max_gpu_utilization", type=float, default=15, help="Percent")
     server_run.add_argument("--max_gpu_memory_utilization", type=float, default=15, help="Percent")
     server_run.add_argument("--log_level", default="warning", choices=["critical", "error", "warning", "info", "debug", "trace"])
@@ -119,7 +125,8 @@ def __entry__() -> None:
                         f.write(create_docker_compose(
                             args.service_name, base_image=args.base_image, hostname=args.service_name,
                             container_name=args.service_name, input_dir=input_dir, output_dir=output_dir,
-                            backup_dir=backup_dir, gpus=args.gpus, env_file=args.env_file
+                            backup_dir=backup_dir, gpus=args.gpus, env_file=args.env_file,
+                            host_site_packages=args.host_site_packages, host_scripts=args.host_scripts
                         ))
                 case "run":
                     run_command(command_to_start_docker_compose(
@@ -128,7 +135,7 @@ def __entry__() -> None:
         case "server":
             match args.server_cmd:
                 case "run":
-                    run_server(args.port, host=args.host, state_dir=args.state_dir,
+                    run_server(args.port, host=args.host, state_dir=args.state_dir, jupyter_executable=args.jupyter_executable,
                                max_gpu_utilization=args.max_gpu_utilization,
                                max_gpu_memory_utilization=args.max_gpu_memory_utilization,
                                log_level=args.log_level, access_log=args.access_log)

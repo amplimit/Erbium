@@ -61,7 +61,8 @@ class LinuxAccount(object):
         return {
             "HOME": identity.home, "USER": identity.username, "LOGNAME": identity.username, "SHELL": identity.shell,
             "LANG": "C.UTF-8",
-            "PATH": f"{identity.home}/.local/bin:/workspace/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            "PATH": f"{identity.home}/.local/bin:/workspace/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:"
+                    "/opt/erbium/host-bin"
         }
 
     def _set_password(self, password: str) -> None:
