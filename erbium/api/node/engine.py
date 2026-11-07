@@ -1,155 +1,187 @@
-from time import time, sleep
 from dataclasses import dataclass
-from threading import Lock, Thread
+from logging import getLogger
+from threading import Event, Thread
+from time import time
+from typing import Callable, Literal, Protocol, Sequence
 
-from erbium.api.os import GPUInfo, kill_all_sessions, run_command
+from erbium.api.node.store import EndReason, Job, Store
+from erbium.api.os import GPUInfo, generate_secret
+
+logger = getLogger(__name__)
+
+EventKind = Literal["queued", "started", "ending", "finished"]
 
 
-@dataclass
-class Job(object):
-    name: str
-    ssh_password: str
-    requested_run_time_hrs: float
-    start_time: float | None = None
+@dataclass(frozen=True)
+class JobEvent(object):
+    kind: EventKind
+    job: Job
+
+
+class Account(Protocol):
+    def grant(self, ssh_password: str, public_keys: Sequence[str], jupyter_token: str) -> None:
+        ...
+
+    def set_public_keys(self, public_keys: Sequence[str]) -> None:
+        ...
+
+    def revoke(self) -> None:
+        ...
 
 
 class Node(object):
-    JUPYTER_LAB_COMMAND: str = (
-        "su - access -c "
-        "\"nohup /workspace/venv/bin/jupyter lab --no-browser --port=8080 --ip=0.0.0.0 "
-        "--ServerApp.root_dir=/workspace --ServerApp.trust_xheaders=True "
-        "--ServerApp.allow_remote_access=True >/tmp/jupyter-lab.log 2>&1 &\""
-    )
-    CLI_LOGOUT_COMMAND: str = (
-        "su - access -c '"
-        "export PATH=/usr/local/bin:$PATH; "
-        "set +e; "
-        "if command -v codex >/dev/null 2>&1; then "
-        "codex logout >/dev/null 2>&1 || codex auth logout >/dev/null 2>&1 || true; "
-        "fi; "
-        "if command -v claude >/dev/null 2>&1; then "
-        "claude logout >/dev/null 2>&1 || claude auth logout >/dev/null 2>&1 || true; "
-        "fi; "
-        "true'"
-    )
-
-    def __init__(self, *, max_gpu_utilization: float = 15, max_gpu_memory_utilization: float = 15,
-                 max_run_time_hrs: float = 168) -> None:
-        """
-        :param max_gpu_utilization: the maximum GPU utilization allowed to be considered available
-        :param max_gpu_memory_utilization: the maximum GPU memory utilization allowed to be considered available
-        :param max_run_time_hrs: the maximum run time in hours allowed for a job
-        """
+    def __init__(self, store: Store, account: Account, *, max_gpu_utilization: float = 15,
+                 max_gpu_memory_utilization: float = 15, on_event: Callable[[JobEvent], None] | None = None,
+                 interval: float = 1) -> None:
+        self.store: Store = store
         self.max_gpu_utilization: float = max_gpu_utilization
         self.max_gpu_memory_utilization: float = max_gpu_memory_utilization
-        self.max_run_time_hrs: float = max_run_time_hrs
-        self._running_job: Job | None = None
-        self._scheduled_jobs: list[Job] = []
-        self._lock: Lock = Lock()
-        self._transitioning: bool = False
+        self._account: Account = account
+        self._on_event: Callable[[JobEvent], None] | None = on_event
+        self._interval: float = interval
+        self._active_job_id: int | None = None
+        self._granted: bool = False
+        self._unannounced_job_id: int | None = None
+        self._keys_changed: Event = Event()
+        self._stopping: Event = Event()
         self._thread: Thread = Thread(target=self._run, daemon=True, name="Node")
+
+    def start(self) -> None:
         self._thread.start()
 
-    @staticmethod
-    def _start_job(job: Job) -> None:
-        run_command(f"echo \"access:{job.ssh_password}\" | chpasswd")
+    def shutdown(self) -> None:
+        self._stopping.set()
+        if self._thread.is_alive():
+            self._thread.join()
 
-    def _mark_job_started(self, job: Job) -> None:
-        with self._lock:
-            job.start_time = time()
-            self._running_job = job
-            self._transitioning = False
-
-    @staticmethod
-    def _kill_running_job() -> None:
-        kill_all_sessions("access", force=True)
-
-    @classmethod
-    def _logout_cli_sessions(cls) -> None:
-        run_command(cls.CLI_LOGOUT_COMMAND)
-
-    @classmethod
-    def _restart_jupyter_lab(cls) -> None:
-        run_command(cls.JUPYTER_LAB_COMMAND)
-
-    @classmethod
-    def _cleanup_finished_job(cls) -> None:
-        cls._logout_cli_sessions()
-        cls._kill_running_job()
-        cls._restart_jupyter_lab()
-
-    def _mark_job_stopped(self) -> None:
-        with self._lock:
-            self._transitioning = False
+    def _emit(self, kind: EventKind, job: Job) -> None:
+        if self._on_event is None:
+            return
+        try:
+            self._on_event(JobEvent(kind, job))
+        except Exception:
+            logger.exception("Failed to handle %s event for job %d", kind, job.id)
 
     def _run(self) -> None:
-        while True:
-            job_to_kill = False
-            job_to_start: Job | None = None
-            with self._lock:
-                if (
-                    self._running_job
-                    and self._running_job.start_time + 3600 * self._running_job.requested_run_time_hrs < time()
-                    and not self._transitioning
-                ):
-                    self._running_job = None
-                    self._transitioning = True
-                    job_to_kill = True
-                if not self._running_job and self._scheduled_jobs and not self._transitioning:
-                    job_to_start = self._scheduled_jobs.pop(0)
-                    self._transitioning = True
-            if job_to_kill:
-                self._cleanup_finished_job()
-                self._mark_job_stopped()
-            if job_to_start:
-                self._start_job(job_to_start)
-                self._mark_job_started(job_to_start)
-            sleep(1)
+        while not self._stopping.is_set():
+            try:
+                self.lock()
+                break
+            except Exception:
+                logger.exception("Failed to lock the account at startup")
+                self._stopping.wait(self._interval)
+        while not self._stopping.is_set():
+            try:
+                self.tick()
+            except Exception:
+                logger.exception("Scheduler tick failed")
+            self._stopping.wait(self._interval)
 
-    def running_job(self) -> tuple[str, float, float | None] | None:
-        if not self._running_job:
-            return None
-        return self._running_job.name, self._running_job.requested_run_time_hrs, self._running_job.start_time
+    def _public_keys(self, username: str) -> tuple[str, ...]:
+        user = self.store.get_user(username)
+        return () if user is None else user.public_keys
 
-    def stop_running_job(self, ssh_password: str) -> bool:
-        should_stop = False
-        with self._lock:
-            if (
-                self._running_job
-                and self._running_job.ssh_password == ssh_password
-                and not self._transitioning
-            ):
-                self._running_job = None
-                self._transitioning = True
-                should_stop = True
-        if not should_stop:
-            return False
-        self._cleanup_finished_job()
-        self._mark_job_stopped()
-        return True
+    def _grant(self, job: Job) -> None:
+        assert job.ssh_password is not None and job.jupyter_token is not None
+        self._active_job_id = job.id
+        self._granted = False
+        self._keys_changed.clear()
+        self._account.grant(job.ssh_password, self._public_keys(job.username), job.jupyter_token)
+        self._granted = True
+        if self._unannounced_job_id == job.id:
+            self._unannounced_job_id = None
+            self._emit("started", job)
 
-    def join_waitlist(self, job: Job) -> None:
-        with self._lock:
-            self._scheduled_jobs.append(job)
+    def _release(self) -> None:
+        job_id = self._active_job_id
+        self._account.revoke()
+        self._active_job_id = None
+        self._granted = False
+        ended = None if job_id is None else self.store.get_job(job_id)
+        if ended is not None and ended.status != "running":
+            self._emit("finished", ended)
 
-    def leave_waitlist(self, job_name: str, ssh_password: str) -> bool:
-        for job in self._scheduled_jobs:
-            if job.name == job_name and job.ssh_password == ssh_password:
-                with self._lock:
-                    self._scheduled_jobs.remove(job)
-                return True
-        return False
+    def tick(self, now: float | None = None) -> None:
+        now = time() if now is None else now
+        running = self.store.running_job()
+        if self._active_job_id is not None and (running is None or running.id != self._active_job_id):
+            self._release()
+        if running is not None:
+            ends_at = running.ends_at()
+            assert ends_at is not None
+            if now >= ends_at:
+                self.store.finish_job(running.id, "expired")
+                self._active_job_id = running.id
+                self._release()
+                running = None
+            else:
+                if not self._granted:
+                    self._grant(running)
+                elif self._keys_changed.is_set():
+                    self._keys_changed.clear()
+                    self._account.set_public_keys(self._public_keys(running.username))
+                notice = 60 * self.store.get_settings().ending_notice_minutes
+                if (not running.ending_notified and 3600 * running.requested_run_time_hrs > notice
+                        and ends_at - now <= notice and self.store.mark_ending_notified(running.id)):
+                    self._emit("ending", running)
+        if running is None:
+            started = self.store.start_next(generate_secret(), generate_secret(48), now)
+            if started is not None:
+                self._unannounced_job_id = started.id
+                self._grant(started)
 
-    def waitlist(self) -> list[tuple[str, float]]:
-        return [(job.name, job.requested_run_time_hrs) for job in self._scheduled_jobs]
+    def lock(self) -> None:
+        if self.store.running_job() is None:
+            self._account.revoke()
 
-    def wait_time_hrs(self) -> float:
-        t = 0
-        if self._running_job:
-            t += self._running_job.start_time / 3600 + self._running_job.requested_run_time_hrs - time() / 3600
-        for job in self._scheduled_jobs:
-            t += job.requested_run_time_hrs
-        return t
+    def public_keys_changed(self, username: str) -> None:
+        running = self.store.running_job()
+        if running is not None and running.username == username:
+            self._keys_changed.set()
+
+    def join(self, username: str, name: str, requested_run_time_hrs: float) -> Job:
+        job = self.store.enqueue(username, name, requested_run_time_hrs)
+        self._emit("queued", job)
+        return job
+
+    def leave(self, job_id: int, username: str) -> Job | None:
+        return self.store.cancel_job(job_id, "left", username=username)
+
+    def stop(self, job_id: int, *, username: str | None = None) -> Job | None:
+        reason: EndReason = "admin_stopped" if username is None else "stopped"
+        return self.store.finish_job(job_id, reason, username=username)
+
+    def remove(self, job_id: int) -> Job | None:
+        job = self.store.cancel_job(job_id, "admin_removed")
+        if job is not None:
+            self._emit("finished", job)
+        return job
+
+    def schedule(self, now: float | None = None) -> list[tuple[Job, float]]:
+        now = time() if now is None else now
+        running = self.store.running_job()
+        start = now
+        if running is not None:
+            ends_at = running.ends_at()
+            assert ends_at is not None
+            start = max(now, ends_at)
+        plan: list[tuple[Job, float]] = []
+        for job in self.store.queued_jobs():
+            plan.append((job, start))
+            start += 3600 * job.requested_run_time_hrs
+        return plan
+
+    def wait_time_hrs(self, now: float | None = None, *, plan: list[tuple[Job, float]] | None = None) -> float:
+        now = time() if now is None else now
+        plan = self.schedule(now) if plan is None else plan
+        if not plan:
+            running = self.store.running_job()
+            ends_at = None if running is None else running.ends_at()
+            return 0 if ends_at is None else max(0., ends_at - now) / 3600
+        last, start = plan[-1]
+        return (start + 3600 * last.requested_run_time_hrs - now) / 3600
 
     def is_available(self, device: GPUInfo) -> bool:
-        return device.utilization_percent < self.max_gpu_utilization and device.memory_utilization_percent < self.max_gpu_memory_utilization
+        utilization = device.utilization_percent
+        return ((utilization is None or utilization < self.max_gpu_utilization)
+                and device.memory_utilization_percent < self.max_gpu_memory_utilization)

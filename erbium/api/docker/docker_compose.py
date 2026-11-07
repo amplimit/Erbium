@@ -8,7 +8,6 @@ __DEFAULT_BASE_IMAGE__: str = "nvidia/cuda:13.0.0-devel-ubuntu24.04"
 __DEFAULT_HOSTNAME__: str = "erbium"
 __DEFAULT_CONTAINER_NAME__: str = "erbium"
 __DEFAULT_SHARED_NETWORK__: str = "labnet"
-__DEFAULT_SSH_PASSWORD__: str = "sshpassword"
 __DEFAULT_INPUT_DIR__: str = "S:/erbium_input"
 __DEFAULT_OUTPUT_DIR__: str = "S:/erbium_output"
 __DEFAULT_BACKUP_DIR__: str = "S:/erbium_backup"
@@ -16,8 +15,10 @@ __DEFAULT_GPU_DRIVER__: str = "nvidia"
 __DEFAULT_GPUS__: str = "all"
 __DEFAULT_CODEX_VOLUME__: str = "erbium_codex"
 __DEFAULT_CLAUDE_VOLUME__: str = "erbium_claude"
-__BACKUP_SECTION_START__: str = "# ERBIUM_BACKUP_SECTION_START"
-__BACKUP_SECTION_END__: str = "# ERBIUM_BACKUP_SECTION_END"
+__DEFAULT_STATE_VOLUME__: str = "erbium_state"
+__DEFAULT_ENV_FILE__: str = "ERBIUM_ENV_FILE"
+__BACKUP_SECTION__: str = "BACKUP"
+__ENV_SECTION__: str = "ENV"
 
 
 def _gpu_device_ids(gpus: int | str | Sequence[int | str]) -> list[str] | None:
@@ -54,17 +55,18 @@ def _set_nvidia_visible_devices(gpus: int | str | Sequence[int | str]) -> str:
     return f"NVIDIA_VISIBLE_DEVICES: {visible_devices}"
 
 
-def _set_backup_enabled(template: str, enabled: bool) -> str:
+def _set_section_enabled(template: str, section: str, enabled: bool) -> str:
+    start, end = f"# ERBIUM_{section}_SECTION_START", f"# ERBIUM_{section}_SECTION_END"
     lines = []
-    skipping_backup_section = False
+    skipping = False
     for line in template.splitlines():
-        if line.strip() == __BACKUP_SECTION_START__:
-            skipping_backup_section = not enabled
+        if line.strip() == start:
+            skipping = not enabled
             continue
-        if line.strip() == __BACKUP_SECTION_END__:
-            skipping_backup_section = False
+        if line.strip() == end:
+            skipping = False
             continue
-        if not skipping_backup_section:
+        if not skipping:
             lines.append(line)
     return "\n".join(lines) + ("\n" if template.endswith("\n") else "")
 
@@ -75,25 +77,27 @@ __TERMS_TO_BE_REPLACED__: dict[str, tuple[str, Callable[[Any], str]]] = {
     "hostname": (f"hostname: {__DEFAULT_HOSTNAME__}", lambda x: f"hostname: {x}"),
     "container_name": (f"container_name: {__DEFAULT_CONTAINER_NAME__}", lambda x: f"container_name: {x}"),
     "shared_network": (__DEFAULT_SHARED_NETWORK__, lambda x: x),
-    "ssh_password": (f"access:{__DEFAULT_SSH_PASSWORD__}", lambda x: f"access:{x}"),
     "input_dir": (f"- {__DEFAULT_INPUT_DIR__}:", lambda x: f"- {x}:"),
     "output_dir": (f"- {__DEFAULT_OUTPUT_DIR__}:", lambda x: f"- {x}:"),
     "backup_dir": (f"- {__DEFAULT_BACKUP_DIR__}:", lambda x: f"- {x}:"),
     "gpu_driver": (f"- driver: {__DEFAULT_GPU_DRIVER__}", lambda x: f"- driver: {x}"),
     "gpus": (f"count: {__DEFAULT_GPUS__}", _set_gpus),
     "codex_volume": (__DEFAULT_CODEX_VOLUME__, lambda x: x),
-    "claude_volume": (__DEFAULT_CLAUDE_VOLUME__, lambda x: x)
+    "claude_volume": (__DEFAULT_CLAUDE_VOLUME__, lambda x: x),
+    "state_volume": (__DEFAULT_STATE_VOLUME__, lambda x: x),
+    "env_file": (__DEFAULT_ENV_FILE__, lambda x: abspath(x).replace("\\", "/"))
 }
 
 
-def create_docker_compose(service_name: str, ssh_password: str, *, base_image: str = __DEFAULT_BASE_IMAGE__,
+def create_docker_compose(service_name: str, *, base_image: str = __DEFAULT_BASE_IMAGE__,
                           hostname: str = __DEFAULT_HOSTNAME__, container_name: str = __DEFAULT_CONTAINER_NAME__,
                           shared_network: str = __DEFAULT_SHARED_NETWORK__,
                           input_dir: str | PathLike[str] = __DEFAULT_INPUT_DIR__,
                           output_dir: str | PathLike[str] = __DEFAULT_OUTPUT_DIR__,
                           backup_dir: str | PathLike[str] | None = __DEFAULT_BACKUP_DIR__,
                           gpu_driver: str = __DEFAULT_GPU_DRIVER__, gpus: int | str | Sequence[int | str] = __DEFAULT_GPUS__,
-                          codex_volume: str | None = None, claude_volume: str | None = None) -> str:
+                          codex_volume: str | None = None, claude_volume: str | None = None,
+                          state_volume: str | None = None, env_file: str | PathLike[str] | None = None) -> str:
     """
     We believe you are able to understand what these parameters are for by reading the "docker-compose.yaml" file, so
     we won't go into detail here.
@@ -104,20 +108,23 @@ def create_docker_compose(service_name: str, ssh_password: str, *, base_image: s
         raise FileNotFoundError(f"Docker Compose template {template_path} not found, check your installation")
     with open(template_path) as f:
         template = f.read()
+    template = template.replace("- ./", f"- {__DOCKER_DIR__}/")
     if not codex_volume:
         codex_volume = f"{__DEFAULT_CODEX_VOLUME__}_{hostname}"
     if not claude_volume:
         claude_volume = f"{__DEFAULT_CLAUDE_VOLUME__}_{hostname}"
+    if not state_volume:
+        state_volume = f"{__DEFAULT_STATE_VOLUME__}_{hostname}"
     backup_enabled = backup_dir is not None
-    template = _set_backup_enabled(template, backup_enabled)
+    template = _set_section_enabled(template, __BACKUP_SECTION__, backup_enabled)
+    template = _set_section_enabled(template, __ENV_SECTION__, env_file is not None)
     if not backup_enabled:
         template = template.replace(" borgbackup ", " ")
     for term, (original, replacement) in __TERMS_TO_BE_REPLACED__.items():
-        if term == "backup_dir" and not backup_enabled:
+        if (term == "backup_dir" and not backup_enabled) or (term == "env_file" and env_file is None):
             continue
         template = template.replace(original, replacement(locals()[term]))
     template = template.replace(f"NVIDIA_VISIBLE_DEVICES: {__DEFAULT_GPUS__}", _set_nvidia_visible_devices(gpus))
-    template = template.replace("./", f"{__DOCKER_DIR__}/")
     return template
 
 

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/ProjectNeura/ProjectNeura/refs/heads/master/img/logo.svg" />
+  <title>Erbium Sign In</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+  <main class="auth-shell">
+    <article class="glass-card form-card auth-card fade-up">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <strong>Erbium</strong>
+          <span>Compute platform</span>
+        </div>
+      </div>
+      <form id="loginForm">
+        <label>
+          Username
+          <input id="loginUsername" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" required />
+        </label>
+        <label>
+          Password
+          <input id="loginPassword" type="password" autocomplete="current-password" required />
+        </label>
+        <button id="loginButton" type="submit">Sign in</button>
+        <div class="feedback info" id="loginFeedback">Accounts are created by an administrator.</div>
+      </form>
+    </article>
+  </main>
+  <script src="/assets/common.js"></script>
+  <script src="/assets/login.js"></script>
+</body>
+</html>

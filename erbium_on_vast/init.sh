@@ -10,7 +10,7 @@ VENV_DIR="${VENV_DIR:-${WORKSPACE}/venv}"
 PVENVS_DIR="${PVENVS_DIR:-${WORKSPACE}/pvenvs}"
 PYTHON_BIN="${PYTHON_BIN:-python3.12}"
 UV_BIN="${UV_BIN:-${ROOT_HOME}/.local/bin/uv}"
-ERBIUM_PACKAGE="${ERBIUM_PACKAGE:-git+https://github.com/ProjectNeura/Erbium}"
+ERBIUM_PACKAGE="${ERBIUM_PACKAGE:-git+https://github.com/amplimit/Erbium}"
 
 export NVIDIA_VISIBLE_DEVICES="${NVIDIA_VISIBLE_DEVICES:-all}"
 export NVIDIA_DRIVER_CAPABILITIES="${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}"
