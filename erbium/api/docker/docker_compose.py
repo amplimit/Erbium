@@ -1,6 +1,7 @@
 from typing import Any, Callable, Sequence
 from os import PathLike
 from os.path import exists, abspath
+from re import fullmatch
 
 
 __DOCKER_DIR__: str = f"{abspath(__file__)[:-28]}docker".replace("\\", "/")
@@ -18,11 +19,9 @@ __DEFAULT_CLAUDE_VOLUME__: str = "erbium_claude"
 __DEFAULT_STATE_VOLUME__: str = "erbium_state"
 __DEFAULT_ENV_FILE__: str = "ERBIUM_ENV_FILE"
 __DEFAULT_HOST_SITE_PACKAGES__: str = "ERBIUM_HOST_SITE_PACKAGES"
-__DEFAULT_HOST_SCRIPTS__: str = "ERBIUM_HOST_SCRIPTS"
 __BACKUP_SECTION__: str = "BACKUP"
 __ENV_SECTION__: str = "ENV"
 __HOST_PACKAGES_SECTION__: str = "HOST_PACKAGES"
-__HOST_SCRIPTS_SECTION__: str = "HOST_SCRIPTS"
 
 
 def _gpu_device_ids(gpus: int | str | Sequence[int | str]) -> list[str] | None:
@@ -90,18 +89,17 @@ __TERMS_TO_BE_REPLACED__: dict[str, tuple[str, Callable[[Any], str]]] = {
     "claude_volume": (__DEFAULT_CLAUDE_VOLUME__, lambda x: x),
     "state_volume": (__DEFAULT_STATE_VOLUME__, lambda x: x),
     "env_file": (__DEFAULT_ENV_FILE__, lambda x: abspath(x).replace("\\", "/")),
-    "host_site_packages": (__DEFAULT_HOST_SITE_PACKAGES__, lambda x: str(x)),
-    "host_scripts": (__DEFAULT_HOST_SCRIPTS__, lambda x: str(x))
+    "host_site_packages": (__DEFAULT_HOST_SITE_PACKAGES__, lambda x: str(x))
 }
-__OPTIONAL_TERMS__: tuple[str, ...] = ("backup_dir", "env_file", "host_site_packages", "host_scripts")
+__OPTIONAL_TERMS__: tuple[str, ...] = ("backup_dir", "env_file", "host_site_packages")
 
 
-def _host_path(path: str | PathLike[str] | None) -> str | None:
+def _site_packages_path(path: str | PathLike[str] | None) -> str | None:
     if path is None:
         return None
     value = str(path).replace("\\", "/").rstrip("/")
-    if not value.startswith("/") or ":" in value:
-        raise ValueError(f"Host Python paths must be absolute POSIX paths without ':', got {path}")
+    if not fullmatch(r"(/[\w.+-]+)+/lib/python3\.\d+/(dist|site)-packages", value):
+        raise ValueError(f"Expected an absolute path ending in lib/python3.X/dist-packages or site-packages, got {path}")
     return value
 
 
@@ -114,8 +112,7 @@ def create_docker_compose(service_name: str, *, base_image: str = __DEFAULT_BASE
                           gpu_driver: str = __DEFAULT_GPU_DRIVER__, gpus: int | str | Sequence[int | str] = __DEFAULT_GPUS__,
                           codex_volume: str | None = None, claude_volume: str | None = None,
                           state_volume: str | None = None, env_file: str | PathLike[str] | None = None,
-                          host_site_packages: str | PathLike[str] | None = None,
-                          host_scripts: str | PathLike[str] | None = None) -> str:
+                          host_site_packages: str | PathLike[str] | None = None) -> str:
     """
     We believe you are able to understand what these parameters are for by reading the "docker-compose.yaml" file, so
     we won't go into detail here.
@@ -136,9 +133,8 @@ def create_docker_compose(service_name: str, *, base_image: str = __DEFAULT_BASE
     backup_enabled = backup_dir is not None
     template = _set_section_enabled(template, __BACKUP_SECTION__, backup_enabled)
     template = _set_section_enabled(template, __ENV_SECTION__, env_file is not None)
-    host_site_packages, host_scripts = _host_path(host_site_packages), _host_path(host_scripts)
+    host_site_packages = _site_packages_path(host_site_packages)
     template = _set_section_enabled(template, __HOST_PACKAGES_SECTION__, host_site_packages is not None)
-    template = _set_section_enabled(template, __HOST_SCRIPTS_SECTION__, host_scripts is not None)
     if not backup_enabled:
         template = template.replace(" borgbackup ", " ")
     for term, (original, replacement) in __TERMS_TO_BE_REPLACED__.items():

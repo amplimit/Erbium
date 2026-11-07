@@ -5,6 +5,7 @@ from sys import exit as sys_exit, stdin
 
 from erbium.api import create_docker_compose, command_to_start_docker_compose, run_command, command_to_initialize_docker
 from erbium.api.docker.docker_compose import __DEFAULT_BASE_IMAGE__, __DEFAULT_SHARED_NETWORK__
+from erbium.api.docker.host_python import write_console_scripts
 from erbium.server.auth import EMAIL_PATTERN, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, USERNAME_PATTERN, \
     hash_password
 from erbium.server.run import DEFAULT_STATE_DIR, open_store, run_server
@@ -68,10 +69,11 @@ def __entry__() -> None:
     docker_create.add_argument("--host_site_packages", default=None,
                                help="Host site-packages directory to mount read-only at the same path, so the container "
                                     "uses the host Python environment instead of a virtual environment")
-    docker_create.add_argument("--host_scripts", default=None,
-                               help="Host directory with the console scripts of those packages, such as /usr/local/bin")
     docker_create.add_argument("paths", nargs="+",
                                help="INPUT_DIR OUTPUT_DIR BACKUP_DIR SAVE_AS, or INPUT_DIR OUTPUT_DIR SAVE_AS with --no-backup")
+    docker_scripts = docker_sub.add_parser("scripts", help="Write console scripts for the packages in a site-packages directory")
+    docker_scripts.add_argument("site_packages")
+    docker_scripts.add_argument("target")
     docker_run = docker_sub.add_parser("run")
     docker_run.add_argument("profile_path")
     docker_run.add_argument("service_name")
@@ -126,8 +128,10 @@ def __entry__() -> None:
                             args.service_name, base_image=args.base_image, hostname=args.service_name,
                             container_name=args.service_name, input_dir=input_dir, output_dir=output_dir,
                             backup_dir=backup_dir, gpus=args.gpus, env_file=args.env_file,
-                            host_site_packages=args.host_site_packages, host_scripts=args.host_scripts
+                            host_site_packages=args.host_site_packages
                         ))
+                case "scripts":
+                    print(f"Wrote {write_console_scripts(args.site_packages, args.target)} console scripts to {args.target}")
                 case "run":
                     run_command(command_to_start_docker_compose(
                         args.profile_path, args.service_name, force_build=args.force_build

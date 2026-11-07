@@ -99,6 +99,17 @@ To disable automatic output backups, omit `BACKUP_DIR` and pass `--no-backup`:
 python -m erbium docker create -n ${SERVICE_NAME} --no-backup ${INPUT_DIR} ${OUTPUT_DIR} ./docker-compose.yaml
 ```
 
+To use the host's Python environment instead of a virtual environment, mount its site-packages read-only and pick a
+base image whose `python3` has the same version as the host. For example, on an Ubuntu 26.04 host:
+
+```shell
+python -m erbium docker create -n ${SERVICE_NAME} -b ubuntu:26.04 --host_site_packages /usr/local/lib/python3.14/dist-packages ${INPUT_DIR} ${OUTPUT_DIR} ${BACKUP_DIR} ./docker-compose.yaml
+```
+
+Members then use `/usr/bin/python3` directly, notebooks run on the same interpreter, and the console scripts of the host
+packages are available on `PATH`. The mounted packages cannot be modified from the container; use `pip install --user
+--break-system-packages` for personal additions.
+
 ### Start the Docker Container
 
 > This step is required if you want to update Erbium
