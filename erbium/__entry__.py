@@ -66,10 +66,11 @@ def __entry__() -> None:
     docker_create.add_argument("--no-backup", action="store_true", help="Disable automatic Borg backups for the output directory")
     docker_create.add_argument("--env_file", default=None,
                                help="File with server secrets such as RESEND_API_KEY, passed to the container")
-    docker_create.add_argument("--host_site_packages", nargs="+", default=None,
+    docker_create.add_argument("--host_site_packages", action="append", default=None,
                                help="Host site-packages directory to mount read-only at the same path, so the container "
                                     "uses the host Python environment instead of a virtual environment. Further "
-                                    "directories, such as /usr/lib/python3/dist-packages, are appended to sys.path in order")
+                                    "directories given by repeating the option, such as /usr/lib/python3/dist-packages, are "
+                                    "appended to sys.path in order")
     docker_create.add_argument("paths", nargs="+",
                                help="INPUT_DIR OUTPUT_DIR BACKUP_DIR SAVE_AS, or INPUT_DIR OUTPUT_DIR SAVE_AS with --no-backup")
     docker_scripts = docker_sub.add_parser("scripts", help="Write console scripts for the packages in a site-packages directory")
