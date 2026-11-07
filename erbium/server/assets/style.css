@@ -214,16 +214,6 @@ p {
   letter-spacing: -0.01em;
 }
 
-.brand-node {
-  margin-left: 2px;
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-}
-
 .app-nav {
   display: flex;
   align-items: center;
@@ -1224,7 +1214,6 @@ td.muted {
     padding: 0 16px;
   }
 
-  .brand-node,
   .user-name,
   .nav-section {
     display: none;
