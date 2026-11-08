@@ -197,13 +197,22 @@ class Store(object):
                 (email, dumps(list(public_keys)), dumps(notifications), username)
             ).rowcount > 0
 
-    def update_account(self, username: str, *, email: str | None, is_admin: bool) -> bool:
+    def update_account(self, username: str, *, new_username: str, email: str | None, is_admin: bool) -> bool:
         with self._write() as connection:
             if not is_admin and self._is_last_admin(connection, username):
                 raise ValueError("Cannot revoke the last administrator")
-            return connection.execute(
-                "UPDATE users SET email = ?, is_admin = ? WHERE username = ?", (email, int(is_admin), username)
+            if new_username != username:
+                if connection.execute("SELECT 1 FROM users WHERE username = ?", (new_username,)).fetchone():
+                    raise ValueError(f"User {new_username} already exists")
+                connection.execute("PRAGMA defer_foreign_keys=ON")
+            updated = connection.execute(
+                "UPDATE users SET username = ?, email = ?, is_admin = ? WHERE username = ?",
+                (new_username, email, int(is_admin), username)
             ).rowcount > 0
+            if updated and new_username != username:
+                for table in ("jobs", "sessions"):
+                    connection.execute(f"UPDATE {table} SET username = ? WHERE username = ?", (new_username, username))
+            return updated
 
     def delete_user(self, username: str) -> bool:
         with self._write() as connection:
