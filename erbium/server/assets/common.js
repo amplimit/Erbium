@@ -13,6 +13,7 @@ const erbium = (() => {
     up: '<path d="m18 15-6-6-6 6"/>',
     down: '<path d="m6 9 6 6 6-6"/>',
     close: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    pencil: '<path d="M21.2 6.8a2.5 2.5 0 0 0-3.5-3.5L4 17v3h3z"/><path d="m15 5 4 4"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
     terminal: '<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>',
     server: '<rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 6h.01"/><path d="M6 18h.01"/>',
