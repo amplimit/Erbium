@@ -151,11 +151,15 @@
         </form>
 
         <form class="card" id="editUserForm">
-          <div class="card-header"><div><h2>Email and role</h2><p>Update an existing account.</p></div></div>
+          <div class="card-header"><div><h2>Edit account</h2><p>Rename, change email, or change role.</p></div></div>
           <div class="card-body">
             <label class="field">
               <span>User</span>
               <select id="editUsername" class="user-select" required></select>
+            </label>
+            <label class="field">
+              <span>Username</span>
+              <input id="editUserNewName" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" pattern="[a-z0-9][a-z0-9_.\-]{1,31}" required />
             </label>
             <label class="field">
               <span>Email (optional)</span>

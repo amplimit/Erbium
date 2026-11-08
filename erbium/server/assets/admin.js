@@ -107,6 +107,7 @@
 
   function fillEditForm() {
     const user = state.overview.users.find((candidate) => candidate.username === $("editUsername").value);
+    $("editUserNewName").value = user ? user.username : "";
     $("editUserEmail").value = user && user.email ? user.email : "";
     $("editUserAdmin").checked = Boolean(user && user.is_admin);
   }
@@ -190,7 +191,7 @@
       $("resetUsername").value = username;
       fillEditForm();
       $("editUserForm").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-      $("editUserEmail").focus({ preventScroll: true });
+      $("editUserNewName").focus({ preventScroll: true });
       return;
     }
     if (!window.confirm(`Delete ${username}? Their jobs are removed and a running session is stopped.`)) {
@@ -223,12 +224,23 @@
   erbium.bindForm($("editUserForm"), $("editUserButton"), $("editUserFeedback"), async () => {
     const username = $("editUsername").value;
     const email = $("editUserEmail").value.trim();
-    await erbium.api("PATCH", `/api/admin/users/${encodeURIComponent(username)}`, {
+    const user = await erbium.api("PATCH", `/api/admin/users/${encodeURIComponent(username)}`, {
+      username: $("editUserNewName").value.trim(),
       email: email || null,
       is_admin: $("editUserAdmin").checked
     });
+    if (username === state.me.username) {
+      state.me = await erbium.loadMe();
+      if (!state.me.is_admin) {
+        window.location.assign("/dash");
+        return "Saved.";
+      }
+    }
     await refresh();
-    return `Saved ${username}.`;
+    $("editUsername").value = user.username;
+    $("resetUsername").value = user.username;
+    fillEditForm();
+    return user.username === username ? `Saved ${username}.` : `Renamed ${username} to ${user.username}.`;
   });
 
   erbium.bindForm($("resetPasswordForm"), $("resetPasswordButton"), $("resetPasswordFeedback"), async () => {

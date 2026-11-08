@@ -117,6 +117,7 @@ class NewUserModel(BaseModel):
 
 
 class AccountModel(BaseModel):
+    username: Username | None = None
     email: Email | None = None
     is_admin: bool
 
@@ -423,12 +424,14 @@ def _admin_routes() -> APIRouter:
     @router.patch("/users/{username}")
     def update_user(username: str, account: AccountModel, request: Request) -> dict[str, Any]:
         store = _runtime(request).node.store
+        new_username = account.username or username
         try:
-            if not store.update_account(username, email=account.email, is_admin=account.is_admin):
+            if not store.update_account(username, new_username=new_username, email=account.email,
+                                        is_admin=account.is_admin):
                 raise HTTPException(404, "No user has that name")
         except ValueError as error:
             raise HTTPException(409, str(error)) from error
-        user = store.get_user(username)
+        user = store.get_user(new_username)
         assert user is not None
         return _user_view(user)
 
