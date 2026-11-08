@@ -231,6 +231,10 @@
     });
     if (username === state.me.username) {
       state.me = await erbium.loadMe();
+      if (!state.me.is_admin) {
+        window.location.assign("/dash");
+        return "Saved.";
+      }
     }
     await refresh();
     $("editUsername").value = user.username;
