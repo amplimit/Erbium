@@ -86,6 +86,7 @@
         <td class="muted">${erbium.formatTime(user.created_at)}</td>
         <td>
           <div class="row-actions">
+            <button class="icon-btn" type="button" data-action="edit-user" data-username="${esc(user.username)}" aria-label="Edit ${esc(user.username)}">${icon("pencil")}</button>
             ${user.username === state.me.username ? "" : `<button class="icon-btn" type="button" data-action="delete-user" data-username="${esc(user.username)}" aria-label="Delete ${esc(user.username)}">${icon("trash")}</button>`}
           </div>
         </td>
@@ -179,11 +180,19 @@
   });
 
   $("usersBody").addEventListener("click", async (event) => {
-    const button = event.target.closest("button[data-action='delete-user']");
+    const button = event.target.closest("button[data-action]");
     if (!button) {
       return;
     }
     const username = button.dataset.username;
+    if (button.dataset.action === "edit-user") {
+      $("editUsername").value = username;
+      $("resetUsername").value = username;
+      fillEditForm();
+      $("editUserForm").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      $("editUserEmail").focus({ preventScroll: true });
+      return;
+    }
     if (!window.confirm(`Delete ${username}? Their jobs are removed and a running session is stopped.`)) {
       return;
     }
