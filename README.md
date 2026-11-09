@@ -144,8 +144,8 @@ docker run --rm -v erbium_erbium_state_${SERVICE_NAME}:/from -v erbium-${SERVICE
 
 ### Configure Email Notifications (Optional)
 
-Create a root-only env file next to the deployment, for example `/opt/erbium-deploy/erbium.env` with mode 600. The
-sender domain must be verified in Resend; amplimit uses `mail.amplimit.com`. A send-only Resend key is enough.
+Create a root-only env file next to the deployment, for example `/opt/erbium-deploy/erbium.env` with mode 600, and run
+the Docker commands as root so Compose can read it. The sender domain must be verified in Resend; amplimit uses `mail.amplimit.com`. A send-only Resend key is enough.
 
 ```shell
 RESEND_API_KEY=re_xxxxxxxx
@@ -154,8 +154,8 @@ ERBIUM_PUBLIC_URL=https://node-main-erbium.amplimit.com
 ```
 
 Pass it with `--env_file /opt/erbium-deploy/erbium.env` when running `docker create`. Without it, notifications are
-disabled. Adding the file to an existing deployment requires recreating the container (`docker compose up -d`), not
-just restarting it.
+disabled. To add it to an existing deployment, rerun `docker create` with the original arguments plus `--env_file`,
+then `docker run` again; a restart alone does not pick up the file.
 
 ### Create the First Administrator
 
