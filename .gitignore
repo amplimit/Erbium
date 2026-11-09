@@ -4,3 +4,4 @@ build
 *.egg-info
 dist
 cloudflared_tunnel_token.txt
+.env
